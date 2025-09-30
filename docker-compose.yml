@@ -1,0 +1,10 @@
+services:
+  bot:
+    build: .
+    image: cybersec-discord-bot:latest
+    container_name: cybersec-bot
+    env_file:
+      - .env
+    restart: unless-stopped
+    # No ports required; the bot connects out to Discord
+    # Logs are printed to stdout/stderr by default
