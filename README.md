@@ -98,6 +98,20 @@ docker run --rm \
 #   cybersec-discord-bot
 ```
 
+### Docker Compose
+Use Docker Compose for a simple, repeatable local run with logs.
+
+```bash
+# Build and start in the background
+docker compose up -d
+
+# Tail logs
+docker compose logs -f
+
+# Stop and remove the container
+docker compose down
+```
+
 ## Configuration
 Copy .env.example to .env and set the following variables:
 
