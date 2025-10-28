@@ -38,6 +38,7 @@ class CybersecBot(commands.Bot):
         @app_commands.default_permissions(manage_guild=True)
         @self.tree.command(name="sync", description="Force sync application commands in this guild (admin only)")
         async def sync_cmd(interaction: discord.Interaction):
+            await interaction.response.defer(empheral=True)
             try:
                 if interaction.guild:
                     await self.tree.sync(guild=interaction.guild)
@@ -49,7 +50,7 @@ class CybersecBot(commands.Bot):
                 else:
                     await interaction.response.send_message("This command must be used in a server.", ephemeral=True)
             except Exception as e:
-                await interaction.response.send_message(f"Sync failed: {e}", ephemeral=True)
+                await interaction.followup.send(f"Sync failed: {e}", ephemeral=True)
 
     async def on_ready(self):
         # Per-guild sync for fast availability, or global fallback
