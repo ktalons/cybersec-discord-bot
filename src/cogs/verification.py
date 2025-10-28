@@ -151,3 +151,8 @@ class VerificationCog(commands.Cog):
             await interaction.response.send_message(
                 "Could not assign the verification role. Contact an admin.", ephemeral=True
             )
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(VerificationCog(bot))
+
+

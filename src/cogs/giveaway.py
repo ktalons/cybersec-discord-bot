@@ -51,3 +51,6 @@ class GiveawayCog(commands.Cog):
             await interaction.followup.send(f"Congratulations {winner.mention}! You won: {prize}")
         else:
             await interaction.followup.send("Winner left the server or cannot be found.")
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(GiveawayCog(bot))

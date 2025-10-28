@@ -97,3 +97,6 @@ def _parse_ics_datetime(value: str) -> datetime:
     else:
         dt = datetime.strptime(value, "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
     return dt
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(CalendarCog(bot))

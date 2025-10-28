@@ -77,3 +77,7 @@ class CTFTimeCog(commands.Cog):
     @_loop.before_loop
     async def _before(self):
         await self.bot.wait_until_ready()
+
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(CTFTimeCog(bot))
