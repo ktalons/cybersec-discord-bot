@@ -42,6 +42,10 @@ class CybersecBot(commands.Bot):
                 if interaction.guild:
                     await self.tree.sync(guild=interaction.guild)
                     await interaction.response.send_message("Commands synced for this guild.", ephemeral=True)
+                    #Sync
+                    self.tree.copy_global_to(guild=interaction.guild)
+                    synced = await self.tree.sync(guild=interaction.guild)
+                    await interaction.response.send_message(f"Synced {len(synced)} command(s) to this guild.", ephemeral=True)
                 else:
                     await interaction.response.send_message("This command must be used in a server.", ephemeral=True)
             except Exception as e:
@@ -55,6 +59,12 @@ class CybersecBot(commands.Bot):
                     guild = discord.Object(id=gid)
                     await self.tree.sync(guild=guild)
                 logger.info(f"Synced commands for {len(self.config.guild_ids)} guild(s)")
+                #Sync
+                for gid in self.config.guild_ids:
+                    guild = discord.Object(id=gid)
+                    self.tree.copy_global_to(guild=guild)
+                    synced = await self.tree.sync(guild=guild)
+                    logger.info(f"Synced {len(synced)} command(s) to guild {gid}")
             else:
                 synced = await self.tree.sync()
                 logger.info(f"Globally synced {len(synced)} command(s)")
