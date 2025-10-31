@@ -28,11 +28,13 @@ class CybersecBot(commands.Bot):
         from .cogs.giveaway import GiveawayCog
         from .cogs.calendar import CalendarCog
         from .cogs.ctftime import CTFTimeCog
+        from .cogs.roster import RosterCog
 
         await self.add_cog(VerificationCog(self))
         await self.add_cog(GiveawayCog(self))
         await self.add_cog(CalendarCog(self))
         await self.add_cog(CTFTimeCog(self))
+        await self.add_cog(RosterCog(self))
 
         # Admin-only command to force sync
         @app_commands.default_permissions(manage_guild=True)
