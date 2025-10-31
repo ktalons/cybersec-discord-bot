@@ -29,9 +29,9 @@ class GiveawayView(discord.ui.View):
         # Update the embed with new entry count
         if self.message:
             await self.update_embed()
-            
-    # Build the giveaway embed with current data.
+    
     def _build_embed(self) -> discord.Embed:
+        """Build the giveaway embed with current data."""
         embed = discord.Embed(
             title="🎉 Giveaway!",
             description=f"**Prize:** {self.prize}\n\nClick the button below to enter!",
@@ -74,9 +74,9 @@ class GiveawayView(discord.ui.View):
         embed.set_footer(text=f"Ends at {self.end_time.strftime('%I:%M:%S %p UTC')}")
         
         return embed
-      
-    # Update the giveaway message with current data.
+    
     async def update_embed(self):
+        """Update the giveaway message with current data."""
         if not self.message:
             return
         
