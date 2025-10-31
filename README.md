@@ -25,33 +25,23 @@ A modern Discord bot tailored for cybersecurity clubs and communities.
 
 ## Table of contents
 - Features
-- Demo
 - Quick start
 - Docker
 - Configuration
 - Usage
-- Commands (placeholders)
+- Commands
 - Permissions and intents
 - Troubleshooting
 - Development
-- License
+- Contributing & License
 
 ## Features
-- Email-based verification workflow to gate access to your server
-- Giveaway utility for quick raffles
-- Calendar announcements from a public Google Calendar (ICS)
-- CTFtime upcoming events announcements with a configurable window
+- **Email verification** — Email-based verification workflow to gate access to your server
+- **CTF roster management** — Create team rosters with skill level tracking (Rookie, Intermediate, Veteran)
+- **Giveaways** — Interactive raffles with real-time countdown timer and entry count
+- **Calendar announcements** — Automatic posts from a public Google Calendar (ICS)
+- **CTFtime integration** — Upcoming CTF events announcements with a configurable window
 
-## Demo
-> Placeholder: Add a screenshot or GIF demonstrating verification or announcements.
->
-> Suggested paths:
-> - `docs/demo.gif`
-> - `docs/screenshot.png`
->
-> Example embed (update the path once added):
->
-> ![Demo](docs/demo.gif)
 
 ## Quick start
 
@@ -137,18 +127,30 @@ Notes on slash command sync:
 - Invite the bot to your server with permissions to manage roles and send messages in target channels
 - Configure dedicated channels for calendar and CTFtime announcements via the respective channel IDs
 
-## Commands (placeholders)
-> Placeholder: Document slash commands for each cog here once finalized.
->
-> Suggested structure:
-> - Verification
->   - `/verify` — Initiate email verification flow (details TBD)
-> - Giveaway
->   - `/giveaway start` — Start a giveaway (details TBD)
-> - Calendar
->   - `/calendar subscribe` — Subscribe a channel to calendar updates (details TBD)
-> - CTFtime
->   - `/ctf upcoming` — Show upcoming events (details TBD)
+## Commands
+
+### Verification
+- `/verify` — Request a verification code via email
+- `/submit_code` — Submit your verification code to gain access
+
+### Roster Management (Admin only)
+- `/roster_start` — Create a new CTF team roster with interactive sign-ups
+  - Configure title, date/time, description, participant limit, and thumbnail
+  - Members select skill level: 🐣 Rookie, 🌵 Intermediate, 🥷 Veteran
+  - Real-time roster updates as users join or remove themselves
+
+### Giveaways (Admin only)
+- `/giveaway_start` — Start a giveaway with live countdown timer
+  - Displays real-time entry count and time remaining
+  - Prevents duplicate entries
+  - Automatically selects a winner when time expires
+
+### Utility (Admin only)
+- `/sync` — Force sync slash commands in the current server
+
+### Background Tasks
+- **Calendar announcements** — Hourly check for events in the next 24 hours
+- **CTFtime announcements** — Bi-hourly check for upcoming CTF events
 
 ## Permissions and intents
 - Required Discord intents: Server Members (for role assignment), Guilds, and Messages
@@ -163,5 +165,10 @@ Notes on slash command sync:
 - Linting/formatting is not enforced in CI; you can add your preferred tools (e.g., ruff, black) locally
 - CI currently compiles sources (`python -m compileall -q src`) to catch syntax errors
 
-## License
-No license file has been provided yet. Consider adding a LICENSE (e.g., MIT, Apache-2.0) so others know how they can use this project.
+## Contributing & License
+
+We welcome contributions! Please review the following:
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — Guidelines for contributing to this project
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — Community standards and behavior expectations
+- **[LICENSE](LICENSE)** — Project license terms
