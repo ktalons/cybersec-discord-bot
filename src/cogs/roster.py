@@ -155,8 +155,9 @@ class RosterMainView(discord.ui.View):
         # Participants: user_id -> (username, skill_level)
         self.participants: Dict[int, tuple[str, str]] = {}
         
-        # Message reference for updating
-        self.roster_message: Optional[discord.Message] = None
+        # Message reference for updating (store IDs to survive interaction expiry)
+        self.channel_id: Optional[int] = None
+        self.message_id: Optional[int] = None
     
     @discord.ui.button(label="I'm Interested!", style=discord.ButtonStyle.primary, emoji="✋", custom_id="roster_interested")
     async def interested_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -238,20 +239,25 @@ class RosterMainView(discord.ui.View):
             view=self,
         )
         
-        # Store message reference
-        self.roster_message = await interaction.original_response()
+        # Store channel and message ID (survives interaction expiry)
+        message = await interaction.original_response()
+        self.channel_id = message.channel.id
+        self.message_id = message.id
 
     # Updates the roster embed with current participants
     async def update_roster_display(self):
-        if not self.roster_message:
+        if not self.channel_id or not self.message_id:
             return
         
         embed = self._build_embed()
         
         try:
-            await self.roster_message.edit(embed=embed)
+            channel = self.cog.bot.get_channel(self.channel_id)
+            if channel:
+                message = await channel.fetch_message(self.message_id)
+                await message.edit(embed=embed)
         except discord.HTTPException:
-            pass  # Message might have been deleted
+            pass  # Message might have been deleted or network issue
 
     # builds roster with admin entered data
     def _build_embed(self) -> discord.Embed:

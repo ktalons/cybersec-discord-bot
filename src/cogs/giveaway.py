@@ -15,7 +15,8 @@ class GiveawayView(discord.ui.View):
         self.entries: Set[int] = set()
         self.prize = prize
         self.end_time = end_time
-        self.message: Optional[discord.Message] = None
+        self.channel_id: Optional[int] = None
+        self.message_id: Optional[int] = None
 
     @discord.ui.button(label="Enter Giveaway", style=discord.ButtonStyle.success, emoji="🎉")
     async def enter(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -27,8 +28,8 @@ class GiveawayView(discord.ui.View):
         await interaction.response.send_message("You're entered!", ephemeral=True)
         
         # Update the embed with new entry count
-        if self.message:
-            await self.update_embed()
+        if self.channel_id and self.message_id:
+            await self.update_embed(interaction.client)
     
     def _build_embed(self) -> discord.Embed:
         """Build the giveaway embed with current data."""
@@ -75,14 +76,17 @@ class GiveawayView(discord.ui.View):
         
         return embed
     
-    async def update_embed(self):
+    async def update_embed(self, bot: commands.Bot):
         """Update the giveaway message with current data."""
-        if not self.message:
+        if not self.channel_id or not self.message_id:
             return
         
         embed = self._build_embed()
         try:
-            await self.message.edit(embed=embed)
+            channel = bot.get_channel(self.channel_id)
+            if channel:
+                message = await channel.fetch_message(self.message_id)
+                await message.edit(embed=embed)
         except discord.HTTPException:
             pass
 
@@ -110,9 +114,16 @@ class GiveawayCog(commands.Cog):
             view=view,
         )
         
-        # Store message reference for updates
-        view.message = await interaction.original_response()
+        # Store channel and message ID for updates (survives interaction expiry)
+        message = await interaction.original_response()
+        view.channel_id = message.channel.id
+        view.message_id = message.id
         
+        # Start background task for countdown and winner selection
+        self.bot.loop.create_task(self._run_giveaway(view, interaction, duration_minutes, prize))
+    
+    async def _run_giveaway(self, view: GiveawayView, interaction: discord.Interaction, duration_minutes: int, prize: str):
+        """Background task to handle giveaway countdown and winner selection."""
         # Update countdown every 5 seconds
         update_interval = 5  # seconds
         total_duration = duration_minutes * 60
@@ -121,10 +132,10 @@ class GiveawayCog(commands.Cog):
         while elapsed < total_duration:
             await asyncio.sleep(update_interval)
             elapsed += update_interval
-            await view.update_embed()
+            await view.update_embed(self.bot)
         
         # Final update
-        await view.update_embed()
+        await view.update_embed(self.bot)
 
         # Determine winner
         if not view.entries:
