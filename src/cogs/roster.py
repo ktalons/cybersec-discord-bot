@@ -13,9 +13,8 @@ class SkillLevel:
     INTERMEDIATE = "🌵 Intermediate"
     VETERAN = "🥷 Veteran"
 
-
+# Modal to collect roster configuration from admin
 class RosterConfigModal(discord.ui.Modal, title="Configure CTF Roster"):
-    """Modal to collect roster configuration from admin."""
     
     roster_title = discord.ui.TextInput(
         label="Roster Title",
@@ -78,7 +77,6 @@ class RosterConfigModal(discord.ui.Modal, title="Configure CTF Roster"):
 
 
 class SkillSelectView(discord.ui.View):
-    """View for selecting CTF skill level."""
     
     def __init__(self, roster_view: RosterMainView, user: discord.Member):
         super().__init__(timeout=180)  # 3 minute timeout
@@ -118,9 +116,9 @@ class SkillSelectView(discord.ui.View):
             embed=None,
         )
         self.stop()
-    
+
+    # register user with skill level
     async def finalize_registration(self, interaction: discord.Interaction, skill_level: str):
-        """Register user with selected skill level."""
         success = await self.roster_view.add_participant(self.user, skill_level)
         
         if success:
@@ -142,7 +140,6 @@ class SkillSelectView(discord.ui.View):
 
 
 class RosterMainView(discord.ui.View):
-    """Main view for the roster with Interested and Cancel buttons."""
     
     def __init__(self, cog: RosterCog):
         super().__init__(timeout=None)  # Persistent view
@@ -163,7 +160,6 @@ class RosterMainView(discord.ui.View):
     
     @discord.ui.button(label="I'm Interested!", style=discord.ButtonStyle.primary, emoji="✋", custom_id="roster_interested")
     async def interested_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Handle when a user clicks the Interested button."""
         
         # Check if roster is full
         if self.limit and len(self.participants) >= self.limit:
@@ -221,9 +217,9 @@ class RosterMainView(discord.ui.View):
         
         # Update the roster display
         await self.update_roster_display()
-    
+
+    # adds member, returns true
     async def add_participant(self, user: discord.Member, skill_level: str) -> bool:
-        """Add a participant to the roster. Returns True on success."""
         
         # Double-check limit
         if self.limit and len(self.participants) >= self.limit:
@@ -231,9 +227,9 @@ class RosterMainView(discord.ui.View):
         
         self.participants[user.id] = (user.display_name, skill_level)
         return True
-    
+
+    # initial roster post
     async def post_roster(self, interaction: discord.Interaction):
-        """Post the initial roster message."""
         embed = self._build_embed()
         
         await interaction.response.send_message(
@@ -244,9 +240,9 @@ class RosterMainView(discord.ui.View):
         
         # Store message reference
         self.roster_message = await interaction.original_response()
-    
+
+    # Updates the roster embed with current participants
     async def update_roster_display(self):
-        """Update the roster embed with current participants."""
         if not self.roster_message:
             return
         
@@ -256,9 +252,9 @@ class RosterMainView(discord.ui.View):
             await self.roster_message.edit(embed=embed)
         except discord.HTTPException:
             pass  # Message might have been deleted
-    
+
+    # builds roster with admin entered data
     def _build_embed(self) -> discord.Embed:
-        """Build the roster embed with current data."""
         embed = discord.Embed(
             title=self.title,
             description=self.description,
@@ -333,9 +329,8 @@ class RosterMainView(discord.ui.View):
         
         return embed
 
-
+# CTF roster cog
 class RosterCog(commands.Cog):
-    """Cog for managing CTF event rosters."""
     
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -343,7 +338,6 @@ class RosterCog(commands.Cog):
     @app_commands.default_permissions(manage_guild=True)
     @app_commands.command(name="roster_start", description="Create a new CTF roster (admin only)")
     async def roster_start(self, interaction: discord.Interaction):
-        """Start creating a new roster."""
         
         # Create the main view for this roster
         roster_view = RosterMainView(self)
