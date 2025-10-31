@@ -197,9 +197,9 @@ class RosterMainView(discord.ui.View):
             ephemeral=True,
         )
     
-    @discord.ui.button(label="Remove Me", style=discord.ButtonStyle.danger, emoji="❌", custom_id="roster_remove")
+    # Handle when a user wants to remove themselves from the roster.
+    @discord.ui.button(label="Remove Me", style=discord.ButtonStyle.danger, emoji="❎", custom_id="roster_remove")
     async def remove_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Handle when a user wants to remove themselves from the roster."""
         
         if interaction.user.id not in self.participants:
             await interaction.response.send_message(
