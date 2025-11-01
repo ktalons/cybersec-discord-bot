@@ -10,39 +10,6 @@
 ✅ **Fixed /sync command** - Now works correctly  
 ✅ **New admin commands** - `/roster_delete`  
 
-## Local Testing (macOS)
-
-1. **Pull latest changes:**
-   ```bash
-   cd ~/dev/cybersec-discord-bot
-   git pull
-   ```
-
-2. **Update dependencies:**
-   ```bash
-   .venv/bin/pip install -r requirements.txt
-   ```
-
-3. **Test run:**
-   ```bash
-   .venv/bin/python src/main.py
-   ```
-
-4. **Watch the logs:**
-   Look for successful startup messages like:
-   ```
-   ✅ Successfully loaded GiveawayCog
-   ✅ Successfully loaded RosterCog
-   🚀 Bot is ready and operational!
-   ```
-
-5. **Test features:**
-   - Create a short giveaway (2-3 minutes)
-   - Create a test roster
-   - Stop the bot (Ctrl+C)
-   - Restart the bot
-   - Verify buttons still work
-
 ## Ubuntu Server Deployment
 
 ### Option 1: Docker (Recommended)
