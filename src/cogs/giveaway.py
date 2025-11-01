@@ -189,6 +189,77 @@ class GiveawayCog(commands.Cog):
             is_ended=view.is_ended
         )
     
+    async def cog_app_command_error(self, interaction: discord.Interaction, error: Exception):
+        # Handle errors in app commands
+        logger.error(f"Error in giveaway command: {error}", exc_info=True)
+        
+        error_message = f"❌ An error occurred: {str(error)}"
+        
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(error_message, ephemeral=True)
+            else:
+                await interaction.response.send_message(error_message, ephemeral=True)
+        except:
+            logger.error("Failed to send error message to user")
+    
+    async def _restore_giveaways(self):
+        # Restore giveaways from database on startup
+        await self.bot.wait_until_ready()
+        await self.db.initialize()
+        
+        giveaways_data = await self.db.load_giveaways()
+        logger.info(f"Restoring {len(giveaways_data)} giveaways from database")
+        
+        for data in giveaways_data:
+            try:
+                # Fetch the message
+                channel = self.bot.get_channel(data["channel_id"])
+                if not channel:
+                    logger.warning(f"Channel {data['channel_id']} not found for giveaway {data['custom_id']}")
+                    continue
+                
+                try:
+                    message = await channel.fetch_message(data["message_id"])
+                except discord.NotFound:
+                    logger.warning(f"Message {data['message_id']} not found, deleting giveaway {data['custom_id']}")
+                    await self.db.delete_giveaway(data["custom_id"])
+                    continue
+                
+                # Recreate the view
+                view = GiveawayView(
+                    prize=data["prize"],
+                    end_time=data["end_time"],
+                    giveaway_cog=self,
+                    custom_id=data["custom_id"]
+                )
+                view.entries = data["entries"]
+                view.message = message
+                view.is_ended = data["is_ended"]
+                
+                # Re-attach the view to the message
+                self.bot.add_view(view, message_id=message.id)
+                self.active_giveaways[data["custom_id"]] = view
+                
+                logger.info(f"Restored giveaway {data['custom_id']} with {len(view.entries)} entries")
+            except Exception as e:
+                logger.error(f"Failed to restore giveaway {data.get('custom_id', 'unknown')}: {e}")
+    
+    async def save_giveaway_to_db(self, view: GiveawayView):
+        # Save a giveaway to the database
+        if not view.message:
+            return
+        
+        await self.db.save_giveaway(
+            custom_id=view.custom_id,
+            prize=view.prize,
+            end_time=view.end_time,
+            channel_id=view.message.channel.id,
+            message_id=view.message.id,
+            entries=view.entries,
+            is_ended=view.is_ended
+        )
+    
     @tasks.loop(seconds=5)
     async def giveaway_update_task(self):
         # Background task to update all active giveaways every 5 seconds
