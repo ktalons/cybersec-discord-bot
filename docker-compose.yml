@@ -6,5 +6,8 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+    volumes:
+      # Persistent database storage
+      - ./data:/app/data
     # No ports required; the bot connects out to Discord
     # Logs are printed to stdout/stderr by default

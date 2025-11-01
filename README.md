@@ -70,12 +70,18 @@ cp .env.example .env
 cp .env.example .env
 # Edit .env with your values
 
+# Create data directory for persistence
+mkdir -p data
+
 # Run
 docker-compose up -d
 
 # View logs
-docker-compose logs -f
+docker-compose logs -f bot
 ```
+
+> 📘 **For detailed Docker setup, volume persistence, and troubleshooting, see [DOCKER.md](DOCKER.md)**
+
 </details>
 
 ## ⚙️ Configuration
@@ -125,9 +131,10 @@ CTFTIME_EVENTS_WINDOW_DAYS=7       # Days ahead for CTF events
 
 | Document | Description |
 |----------|-------------|
+| **[DOCKER.md](DOCKER.md)** | Complete Docker deployment guide with volume persistence |
+| **[DEPLOY.md](DEPLOY.md)** | General deployment instructions and checklist |
 | **[IMPROVEMENTS.md](IMPROVEMENTS.md)** | Feature overview and technical details |
 | **[LOGGING.md](LOGGING.md)** | Log format guide and debugging tips |
-| **[DEPLOY.md](DEPLOY.md)** | Deployment instructions and checklist |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | How to contribute to this project |
 | **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** | Community standards |
 
@@ -154,8 +161,18 @@ CTFTIME_EVENTS_WINDOW_DAYS=7       # Days ahead for CTF events
 <summary><b>Bot crashes on restart?</b></summary>
 
 - Check `data/` directory exists and is writable
+- For Docker: ensure volume is mounted (see [DOCKER.md](DOCKER.md))
 - Review logs for specific error messages
 - See [LOGGING.md](LOGGING.md) for log interpretation
+</details>
+
+<details>
+<summary><b>Database in /tmp warning?</b></summary>
+
+- Bot is using temporary storage - data will be lost on restart
+- Fix: Create `data/` directory with proper permissions
+- Docker: Add volume mount to `docker-compose.yml` (see [DOCKER.md](DOCKER.md))
+- Set `DATABASE_PATH` in `.env` if using custom location
 </details>
 
 > 💡 For more help, check [LOGGING.md](LOGGING.md) for common error patterns.
