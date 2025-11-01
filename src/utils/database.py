@@ -9,14 +9,11 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger("bot.database")
 
-# Default database path
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "bot.db"
-
 
 class Database:
     # Async SQLite database wrapper for bot persistence
     
-    def __init__(self, db_path: Path = DB_PATH):
+    def __init__(self, db_path: Path):
         self.db_path = db_path
     
     async def initialize(self):
@@ -24,12 +21,16 @@ class Database:
         # Create database directory if it doesn't exist
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
+            logger.info(f"Database directory ensured: {self.db_path.parent}")
+        except (PermissionError, OSError) as e:
             logger.error(f"Failed to create database directory: {e}")
-            # Try fallback location in temp directory
+            logger.warning("⚠️  WARNING: Falling back to temporary directory for database")
+            logger.warning("⚠️  WARNING: Database will be lost on container restart!")
+            logger.warning("⚠️  WARNING: Please configure a persistent volume or writable DATABASE_PATH")
+            # Fallback to temp directory with clear warning
             import tempfile
             self.db_path = Path(tempfile.gettempdir()) / "bot.db"
-            logger.warning(f"Using fallback database location: {self.db_path}")
+            logger.warning(f"Using temporary database location: {self.db_path}")
         
         async with aiosqlite.connect(self.db_path) as db:
             # Giveaways table
