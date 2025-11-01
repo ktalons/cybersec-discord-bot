@@ -20,14 +20,6 @@ A feature-rich Discord bot built for cybersecurity clubs and CTF communities.
 
 ---
 
-## 📋 Table of Contents
-- [Features](#features)
-- [Quick Start](#quick-start)
-- [Configuration](#configuration)
-- [Commands](#commands)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-
 ## ✨ Features
 
 | Feature | Description |
@@ -45,9 +37,9 @@ A feature-rich Discord bot built for cybersecurity clubs and CTF communities.
 
 ### Prerequisites
 - Python 3.10+
-- Discord bot token ([Create one here](https://discord.com/developers/applications))
+- Discord bot token
   - Enable **Server Members Intent** in Bot settings
-- Gmail account with [App Password](https://support.google.com/accounts/answer/185833) (for verification emails)
+- Gmail account with [App Password](https://support.google.com/accounts/answer/185833)
 
 ### Installation
 
@@ -145,7 +137,7 @@ CTFTIME_EVENTS_WINDOW_DAYS=7       # Days ahead for CTF events
 <summary><b>Commands not appearing in Discord?</b></summary>
 
 - Set `GUILD_IDS` in `.env` for instant sync
-- Run `/sync` command (requires Manage Server permission)
+- Run `/sync` command
 - Wait up to 1 hour for global sync
 - Check bot has application commands scope in invite URL
 </details>
@@ -179,7 +171,7 @@ This project is licensed under the terms in [LICENSE](LICENSE).
 ---
 
 <p align="center">
-  Made with ❤️ for cybersecurity communities<br>
+  Vibed with ❤️ for cybersecurity communities<br>
   <a href="https://github.com/ktalons/cybersec-discord-bot/issues">Report Bug</a> •
   <a href="https://github.com/ktalons/cybersec-discord-bot/issues">Request Feature</a>
 </p>
