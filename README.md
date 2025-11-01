@@ -1,11 +1,8 @@
-# Cybersec Discord Bot
+# 🛡️ Cybersec Discord Bot
 
-A modern Discord bot tailored for cybersecurity clubs and communities.
+A feature-rich Discord bot built for cybersecurity clubs and CTF communities.
 
-- Email-based member verification (e.g., @arizona.edu)
-- Giveaways and simple utilities
-- Google Calendar (ICS) polling and announcements
-- CTFtime upcoming events announcements
+**Key Features:** Email verification • CTF Rosters • Giveaways • Calendar Integration • CTFtime Events
 
 <p>
   <a href="https://github.com/ktalons/cybersec-discord-bot/actions/workflows/ci.yml">
@@ -23,152 +20,166 @@ A modern Discord bot tailored for cybersecurity clubs and communities.
 
 ---
 
-## Table of contents
-- Features
-- Quick start
-- Docker
-- Configuration
-- Usage
-- Commands
-- Permissions and intents
-- Troubleshooting
-- Development
-- Contributing & License
+## 📋 Table of Contents
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Commands](#commands)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
 
-## Features
-- **Email verification** — Email-based verification workflow to gate access to your server
-- **CTF roster management** — Create team rosters with skill level tracking (Rookie, Intermediate, Veteran)
-- **Giveaways** — Interactive raffles with real-time countdown timer and entry count
-- **Calendar announcements** — Automatic posts from a public Google Calendar (ICS)
-- **CTFtime integration** — Upcoming CTF events announcements with a configurable window
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔐 **Email Verification** | Gate server access with domain-based email verification |
+| 👥 **CTF Rosters** | Create team rosters with skill levels (Rookie/Intermediate/Veteran) |
+| 🎉 **Giveaways** | Interactive raffles with live countdown and entry tracking |
+| 📅 **Calendar Integration** | Auto-post events from Google Calendar (ICS) |
+| 🚩 **CTFtime Events** | Announce upcoming CTF competitions |
+| 💾 **Database Persistence** | SQLite storage - survives restarts, supports multi-day events |
+| 📊 **Enhanced Logging** | Comprehensive status updates and error tracking |
 
 
-## Quick start
+## 🚀 Quick Start
 
-Prerequisites:
+### Prerequisites
 - Python 3.10+
-- A Discord application and bot token (enable "Server Members Intent")
-- A Gmail account with an App Password for sending verification emails
+- Discord bot token ([Create one here](https://discord.com/developers/applications))
+  - Enable **Server Members Intent** in Bot settings
+- Gmail account with [App Password](https://support.google.com/accounts/answer/185833) (for verification emails)
 
-Install and run:
+### Installation
+
+<details>
+<summary><b>Option 1: Python (Local)</b></summary>
 
 ```bash
-# Create a virtual environment and install dependencies
+# Clone and setup
+git clone https://github.com/ktalons/cybersec-discord-bot.git
+cd cybersec-discord-bot
 python3 -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
+.venv/bin/pip install -r requirements.txt
 
-# Configure environment
+# Configure
 cp .env.example .env
-# Edit .env and fill in values (see Configuration below)
+# Edit .env with your values
 
-# Start the bot
-python -m src.main
+# Run
+.venv/bin/python -m src.main
 ```
+</details>
 
-## Docker
-Build and run the bot using Docker. Provide configuration via environment variables or an env file.
+<details>
+<summary><b>Option 2: Docker Compose (Recommended)</b></summary>
 
 ```bash
-# Build the image
-docker build -t cybersec-discord-bot .
+# Setup
+cp .env.example .env
+# Edit .env with your values
 
-# Run with an env file (recommended)
-# Ensure your .env contains DISCORD_TOKEN and other configuration
-docker run --rm \
-  --name cybersec-bot \
-  --env-file .env \
-  cybersec-discord-bot
+# Run
+docker-compose up -d
 
-# Alternatively, pass individual variables
-# (replace values or use your shell's exported vars)
-# docker run --rm \
-#   -e DISCORD_TOKEN="$DISCORD_TOKEN" \
-#   -e VERIFY_DOMAIN=arizona.edu \
-#   cybersec-discord-bot
+# View logs
+docker-compose logs -f
+```
+</details>
+
+## ⚙️ Configuration
+
+### Required Environment Variables
+```env
+DISCORD_TOKEN=your_bot_token_here
+GMAIL_USER=your-email@gmail.com
+GMAIL_APP_PASSWORD=your_app_password
 ```
 
-### Docker Compose
-Use Docker Compose for a simple, repeatable local run with logs.
-
-```bash
-# Build and start in the background
-docker compose up -d
-
-# Tail logs
-docker compose logs -f
-
-# Stop and remove the container
-docker compose down
+### Optional Variables
+```env
+VERIFY_DOMAIN=arizona.edu          # Email domain for verification
+VERIFY_ROLE_ID=123456789           # Role ID to assign after verification
+GUILD_IDS=123,456                  # Instant command sync (comma-separated)
+CALENDAR_ICS_URL=https://...       # Google Calendar public ICS URL
+CALENDAR_CHANNEL_ID=123456789      # Channel for calendar posts
+CTF_CHANNEL_ID=123456789           # Channel for CTFtime posts
+CTFTIME_EVENTS_WINDOW_DAYS=7       # Days ahead for CTF events
 ```
 
-## Configuration
-Copy .env.example to .env and set the following variables:
+> 💡 **Tip:** Set `GUILD_IDS` for instant slash command availability. Without it, global sync takes up to 1 hour.
 
-- DISCORD_TOKEN: Your bot token
-- VERIFY_DOMAIN: Allowed email domain (default: arizona.edu)
-- VERIFY_ROLE_NAME: Role name to grant on verification (optional)
-- VERIFY_ROLE_ID: Role ID to grant on verification (preferred if set)
-- GMAIL_USER: Gmail address used to send verification codes
-- GMAIL_APP_PASSWORD: Gmail App Password (not your normal password)
-- GUILD_IDS: Optional comma-separated guild IDs for instant per-guild slash command sync
-- CALENDAR_ICS_URL: Public Google Calendar ICS URL
-- CALENDAR_CHANNEL_ID: Channel ID to post calendar events
-- CTF_CHANNEL_ID: Channel ID to post CTFtime events
-- CTFTIME_EVENTS_WINDOW_DAYS: Days ahead to look for CTFtime events (default: 7)
+## 🤖 Commands
 
-Notes on slash command sync:
-- If GUILD_IDS is provided, slash commands are synced per-guild for instant availability
-- If not provided, global sync can take up to an hour
-- Admins can run /sync in a server to force a re-sync
+### User Commands
+- `/verify` - Request email verification code
+- `/submit_code` - Submit verification code
+- Roster buttons - Join/leave CTF teams
+- Giveaway buttons - Enter/track raffles
 
-## Usage
-- Start the bot: `python -m src.main` or via Docker as shown above
-- Invite the bot to your server with permissions to manage roles and send messages in target channels
-- Configure dedicated channels for calendar and CTFtime announcements via the respective channel IDs
-
-## Commands
-
-### Verification
-- `/verify` — Request a verification code via email
-- `/submit_code` — Submit your verification code to gain access
-
-### Roster Management (Admin only)
-- `/roster_start` — Create a new CTF team roster with interactive sign-ups
-  - Configure title, date/time, description, participant limit, and thumbnail
-  - Members select skill level: 🐣 Rookie, 🌵 Intermediate, 🥷 Veteran
-  - Real-time roster updates as users join or remove themselves
-
-### Giveaways (Admin only)
-- `/giveaway_start` — Start a giveaway with live countdown timer
-  - Displays real-time entry count and time remaining
-  - Prevents duplicate entries
-  - Automatically selects a winner when time expires
-
-### Utility (Admin only)
-- `/sync` — Force sync slash commands in the current server
+### Admin Commands
+| Command | Description |
+|---------|-------------|
+| `/roster_start` | Create interactive CTF team roster |
+| `/roster_delete` | Remove a roster by message ID |
+| `/giveaway_start` | Launch a timed giveaway raffle |
+| `/sync` | Force slash command sync |
 
 ### Background Tasks
-- **Calendar announcements** — Hourly check for events in the next 24 hours
-- **CTFtime announcements** — Bi-hourly check for upcoming CTF events
+- ⏰ **Hourly** - Calendar event checks
+- ⏰ **Every 2 hours** - CTFtime event checks
+- ⏰ **Daily** - Database cleanup (removes entries 60+ days old)
 
-## Permissions and intents
-- Required Discord intents: Server Members (for role assignment), Guilds, and Messages
-- The bot must have permission to manage roles (for verification) and send messages in target channels
+## 📚 Documentation
 
-## Troubleshooting
-- If slash commands are missing, set GUILD_IDS or run /sync (requires Manage Server)
-- Ensure Gmail uses an App Password and that less secure access is not required
-- Double-check channel and role IDs are correct and the bot has sufficient permissions
+| Document | Description |
+|----------|-------------|
+| **[IMPROVEMENTS.md](IMPROVEMENTS.md)** | Feature overview and technical details |
+| **[LOGGING.md](LOGGING.md)** | Log format guide and debugging tips |
+| **[DEPLOY.md](DEPLOY.md)** | Deployment instructions and checklist |
+| **[CONTRIBUTING.md](CONTRIBUTING.md)** | How to contribute to this project |
+| **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** | Community standards |
 
-## Development
-- Linting/formatting is not enforced in CI; you can add your preferred tools (e.g., ruff, black) locally
-- CI currently compiles sources (`python -m compileall -q src`) to catch syntax errors
+## 🔧 Troubleshooting
 
-## Contributing & License
+<details>
+<summary><b>Commands not appearing in Discord?</b></summary>
 
-We welcome contributions! Please review the following:
+- Set `GUILD_IDS` in `.env` for instant sync
+- Run `/sync` command (requires Manage Server permission)
+- Wait up to 1 hour for global sync
+- Check bot has application commands scope in invite URL
+</details>
 
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** — Guidelines for contributing to this project
-- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — Community standards and behavior expectations
-- **[LICENSE](LICENSE)** — Project license terms
+<details>
+<summary><b>Email verification not working?</b></summary>
+
+- Use Gmail App Password, not regular password
+- Enable "Less secure app access" if needed
+- Check `GMAIL_USER` and `GMAIL_APP_PASSWORD` are set correctly
+</details>
+
+<details>
+<summary><b>Bot crashes on restart?</b></summary>
+
+- Check `data/` directory exists and is writable
+- Review logs for specific error messages
+- See [LOGGING.md](LOGGING.md) for log interpretation
+</details>
+
+> 💡 For more help, check [LOGGING.md](LOGGING.md) for common error patterns.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## 📄 License
+
+This project is licensed under the terms in [LICENSE](LICENSE).
+
+---
+
+<p align="center">
+  Made with ❤️ for cybersecurity communities<br>
+  <a href="https://github.com/ktalons/cybersec-discord-bot/issues">Report Bug</a> •
+  <a href="https://github.com/ktalons/cybersec-discord-bot/issues">Request Feature</a>
+</p>

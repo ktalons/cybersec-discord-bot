@@ -135,29 +135,6 @@ If something goes wrong:
 4. **Report issue:**
    Save logs and error messages for debugging.
 
-## Troubleshooting
-
-### Bot won't start
-- Check: `DISCORD_TOKEN` in `.env`
-- Check: Dependencies installed (`pip list | grep aiosqlite`)
-- Check: Python version (3.8+)
-- Review: Error logs
-
-### Commands not appearing
-- Check: `/sync` was run successfully
-- Check: `GUILD_IDS` in `.env` (if using per-guild sync)
-- Check: Bot has proper permissions
-- Wait: Global sync takes up to 1 hour
-
-### Database errors
-- Check: `data/` directory exists and is writable
-- Check: `data/bot.db` file permissions
-- Try: Delete `data/bot.db` (will lose existing giveaways/rosters)
-
-### Giveaways/rosters not restoring
-- Check logs for: "Restoring X giveaways from database"
-- Check: Channel/message IDs are valid
-- Check: Bot has access to channels
 
 ## Maintenance
 
@@ -193,15 +170,5 @@ Check these files:
 - `LOGGING.md` - Log interpretation guide
 - `README.md` - Original setup instructions
 
-## Success Indicators
-
-You'll know deployment succeeded when:
-1. ✅ No ERROR/CRITICAL in logs during startup
-2. ✅ All 5 cogs loaded successfully
-3. ✅ Commands synced to guild(s)
-4. ✅ Giveaways/rosters survive restart
-5. ✅ No webhook token errors (401)
-6. ✅ `/sync` command works
-7. ✅ Database file created at `data/bot.db`
 
 Enjoy your improved bot! 🎉

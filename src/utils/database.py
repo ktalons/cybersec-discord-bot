@@ -5,7 +5,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logger = logging.getLogger("bot.database")
 
@@ -203,3 +203,32 @@ class Database:
                 await db.commit()
         except Exception as e:
             logger.error(f"Failed to delete roster {custom_id}: {e}")
+    
+    # === CLEANUP OPERATIONS ===
+    
+    async def cleanup_old_entries(self, days: int = 60):
+        # Delete giveaways and rosters older than specified days
+        try:
+            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            cutoff_str = cutoff_date.isoformat()
+            
+            async with aiosqlite.connect(self.db_path) as db:
+                # Delete old ended giveaways
+                cursor = await db.execute(
+                    "DELETE FROM giveaways WHERE is_ended = 1 AND end_time < ?",
+                    (cutoff_str,)
+                )
+                giveaways_deleted = cursor.rowcount
+                
+                # Note: Rosters don't have timestamps, so we skip them
+                # Admins can manually delete old rosters with /roster_delete
+                
+                await db.commit()
+                
+                if giveaways_deleted > 0:
+                    logger.info(f"Cleaned up {giveaways_deleted} old giveaway(s) from database")
+                
+                return giveaways_deleted
+        except Exception as e:
+            logger.error(f"Failed to cleanup old entries: {e}")
+            return 0
