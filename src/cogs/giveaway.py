@@ -109,12 +109,14 @@ class GiveawayCog(commands.Cog):
         self.db = Database()
         self.active_giveaways: dict[str, GiveawayView] = {}
         self.giveaway_update_task.start()
+        self.database_cleanup_task.start()
         self.bot.loop.create_task(self._restore_giveaways())
         logger.info("GiveawayCog initialized")
 
     def cog_unload(self):
         logger.info("Unloading GiveawayCog...")
         self.giveaway_update_task.cancel()
+        self.database_cleanup_task.cancel()
     
     async def cog_app_command_error(self, interaction: discord.Interaction, error: Exception):
         # Handle errors in app commands
@@ -215,6 +217,20 @@ class GiveawayCog(commands.Cog):
     
     @giveaway_update_task.before_loop
     async def before_giveaway_update(self):
+        await self.bot.wait_until_ready()
+    
+    @tasks.loop(hours=24)
+    async def database_cleanup_task(self):
+        # Clean up old giveaway entries from database (60+ days old)
+        try:
+            deleted = await self.db.cleanup_old_entries(days=60)
+            if deleted > 0:
+                logger.info(f"Database cleanup: removed {deleted} old entries")
+        except Exception as e:
+            logger.error(f"Database cleanup task failed: {e}")
+    
+    @database_cleanup_task.before_loop
+    async def before_database_cleanup(self):
         await self.bot.wait_until_ready()
     
     async def _end_giveaway(self, view: GiveawayView):
