@@ -18,10 +18,19 @@ class Database:
     
     def __init__(self, db_path: Path = DB_PATH):
         self.db_path = db_path
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
     
     async def initialize(self):
         # Create tables if they don't exist
+        # Create database directory if it doesn't exist
+        try:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create database directory: {e}")
+            # Try fallback location in temp directory
+            import tempfile
+            self.db_path = Path(tempfile.gettempdir()) / "bot.db"
+            logger.warning(f"Using fallback database location: {self.db_path}")
+        
         async with aiosqlite.connect(self.db_path) as db:
             # Giveaways table
             await db.execute("""

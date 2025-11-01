@@ -50,7 +50,9 @@ class CybersecBot(commands.Bot):
         for module_name, cog_name in cogs:
             try:
                 logger.info(f"Loading cog: {cog_name}...")
-                module = __import__(f".cogs.{module_name}", fromlist=[cog_name], package=__package__)
+                # Use importlib for proper relative imports
+                from importlib import import_module
+                module = import_module(f".cogs.{module_name}", package="src")
                 cog_class = getattr(module, cog_name)
                 await self.add_cog(cog_class(self))
                 logger.info(f"✅ Successfully loaded {cog_name}")
