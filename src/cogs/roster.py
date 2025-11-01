@@ -8,6 +8,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
+from ..utils.database import Database
+
 logger = logging.getLogger("bot.roster")
 
 
@@ -221,6 +223,9 @@ class RosterMainView(discord.ui.View):
             ephemeral=True,
         )
         
+        # Save to database
+        await self.cog.save_roster_to_db(self)
+        
         # Update the roster display
         await self.update_roster_display()
 
@@ -232,26 +237,38 @@ class RosterMainView(discord.ui.View):
             return False
         
         self.participants[user.id] = (user.display_name, skill_level)
+        
+        # Save to database
+        await self.cog.save_roster_to_db(self)
+        
         return True
 
     # initial roster post
     async def post_roster(self, interaction: discord.Interaction):
-        embed = self._build_embed()
-        
-        await interaction.response.send_message(
-            content="📋 **CTF Roster Created!**",
-            embed=embed,
-            view=self,
-        )
-        
-        # Store message reference
-        self.roster_message = await interaction.original_response()
-        self.channel_id = interaction.channel_id
-        self.message_id = self.roster_message.id
-        
-        # Register this view with the cog
-        self.cog.active_rosters[self.custom_id] = self
-        logger.info(f"Created roster '{self.title}' with ID {self.custom_id}")
+        try:
+            embed = self._build_embed()
+            
+            await interaction.response.send_message(
+                content="📋 **CTF Roster Created!**",
+                embed=embed,
+                view=self,
+            )
+            
+            # Store message reference
+            self.roster_message = await interaction.original_response()
+            self.channel_id = interaction.channel_id
+            self.message_id = self.roster_message.id
+            
+            # Register this view with the cog
+            self.cog.active_rosters[self.custom_id] = self
+            
+            # Save to database
+            await self.cog.save_roster_to_db(self)
+            
+            logger.info(f"✅ Roster '{self.title}' created successfully (ID: {self.custom_id})")
+        except Exception as e:
+            logger.error(f"Failed to post roster: {e}", exc_info=True)
+            raise
 
     # Updates the roster embed with current participants
     async def update_roster_display(self):
@@ -267,14 +284,23 @@ class RosterMainView(discord.ui.View):
                     logger.error(f"Failed to recover roster message: {e}")
                     return
             else:
+                logger.warning(f"Cannot update roster {self.custom_id}: no message reference")
                 return
         
         embed = self._build_embed()
         
         try:
             await self.roster_message.edit(embed=embed)
+        except discord.NotFound:
+            logger.warning(f"Roster message {self.custom_id} was deleted")
+            self.roster_message = None
         except discord.HTTPException as e:
-            logger.error(f"Failed to update roster embed: {e}")
+            # Check if it's a webhook token error (invalid message reference)
+            if e.status == 401 or "Webhook" in str(e):
+                logger.error(f"Invalid message reference for roster {self.custom_id}, will try to recover")
+                self.roster_message = None
+            else:
+                logger.error(f"Failed to update roster embed: {e}")
         except Exception as e:
             logger.error(f"Unexpected error updating roster: {e}")
 
@@ -359,15 +385,93 @@ class RosterCog(commands.Cog):
     
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.db = Database()
         self.active_rosters: Dict[str, RosterMainView] = {}
         self.roster_refresh_task.start()
+        self.bot.loop.create_task(self._restore_rosters())
+        logger.info("RosterCog initialized")
     
     def cog_unload(self):
+        logger.info("Unloading RosterCog...")
         self.roster_refresh_task.cancel()
+    
+    async def cog_app_command_error(self, interaction: discord.Interaction, error: Exception):
+        # Handle errors in app commands
+        logger.error(f"Error in roster command: {error}", exc_info=True)
+        
+        error_message = f"❌ An error occurred: {str(error)}"
+        
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(error_message, ephemeral=True)
+            else:
+                await interaction.response.send_message(error_message, ephemeral=True)
+        except:
+            logger.error("Failed to send error message to user")
+    
+    async def _restore_rosters(self):
+        # Restore rosters from database on startup
+        await self.bot.wait_until_ready()
+        await self.db.initialize()
+        
+        rosters_data = await self.db.load_rosters()
+        logger.info(f"Restoring {len(rosters_data)} rosters from database")
+        
+        for data in rosters_data:
+            try:
+                # Fetch the message
+                channel = self.bot.get_channel(data["channel_id"])
+                if not channel:
+                    logger.warning(f"Channel {data['channel_id']} not found for roster {data['custom_id']}")
+                    continue
+                
+                try:
+                    message = await channel.fetch_message(data["message_id"])
+                except discord.NotFound:
+                    logger.warning(f"Message {data['message_id']} not found, deleting roster {data['custom_id']}")
+                    await self.db.delete_roster(data["custom_id"])
+                    continue
+                
+                # Recreate the view
+                view = RosterMainView(self, data["custom_id"])
+                view.title = data["title"]
+                view.date_time = data["date_time"]
+                view.description = data["description"]
+                view.limit = data["roster_limit"]
+                view.thumbnail = data["thumbnail"]
+                view.participants = data["participants"]
+                view.roster_message = message
+                view.channel_id = data["channel_id"]
+                view.message_id = data["message_id"]
+                
+                # Re-attach the view to the message
+                self.bot.add_view(view, message_id=message.id)
+                self.active_rosters[data["custom_id"]] = view
+                
+                logger.info(f"Restored roster {data['custom_id']} with {len(view.participants)} participants")
+            except Exception as e:
+                logger.error(f"Failed to restore roster {data.get('custom_id', 'unknown')}: {e}")
+    
+    async def save_roster_to_db(self, view: RosterMainView):
+        # Save a roster to the database
+        if not view.roster_message:
+            return
+        
+        await self.db.save_roster(
+            custom_id=view.custom_id,
+            title=view.title,
+            date_time=view.date_time,
+            description=view.description,
+            channel_id=view.channel_id,
+            message_id=view.message_id,
+            participants=view.participants,
+            roster_limit=view.limit,
+            thumbnail=view.thumbnail
+        )
     
     @tasks.loop(minutes=2)
     async def roster_refresh_task(self):
-        """Background task to keep roster views alive and refreshed."""
+        # Background task to keep roster views alive and refreshed
         for custom_id, view in list(self.active_rosters.items()):
             try:
                 # Ensure message reference is still valid
@@ -393,18 +497,72 @@ class RosterCog(commands.Cog):
     @app_commands.default_permissions(manage_guild=True)
     @app_commands.command(name="roster_start", description="Create a new CTF roster (admin only)")
     async def roster_start(self, interaction: discord.Interaction):
-        
-        # Create unique ID for this roster
-        custom_id = f"roster_{interaction.id}"
-        
-        # Create the main view for this roster
-        roster_view = RosterMainView(self, custom_id)
-        
-        # Show configuration modal
-        modal = RosterConfigModal()
-        modal.view = roster_view  # Pass the view to the modal
-        
-        await interaction.response.send_modal(modal)
+        try:
+            # Create unique ID for this roster
+            custom_id = f"roster_{interaction.id}"
+            
+            logger.info(f"Creating roster (ID: {custom_id}) by {interaction.user}")
+            
+            # Create the main view for this roster
+            roster_view = RosterMainView(self, custom_id)
+            
+            # Show configuration modal
+            modal = RosterConfigModal()
+            modal.view = roster_view  # Pass the view to the modal
+            
+            await interaction.response.send_modal(modal)
+        except Exception as e:
+            logger.error(f"Failed to start roster: {e}", exc_info=True)
+            raise
+    
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.command(name="roster_delete", description="Delete a roster (admin only)")
+    @app_commands.describe(message_id="The message ID of the roster to delete")
+    async def roster_delete(self, interaction: discord.Interaction, message_id: str):
+        # Delete a roster by message ID
+        try:
+            msg_id = int(message_id)
+            
+            # Find the roster
+            roster_to_delete = None
+            for custom_id, view in self.active_rosters.items():
+                if view.message_id == msg_id:
+                    roster_to_delete = (custom_id, view)
+                    break
+            
+            if not roster_to_delete:
+                await interaction.response.send_message(
+                    "❌ Roster not found. Make sure the message ID is correct.",
+                    ephemeral=True
+                )
+                return
+            
+            custom_id, view = roster_to_delete
+            
+            # Delete from database
+            await self.db.delete_roster(custom_id)
+            
+            # Remove from active rosters
+            del self.active_rosters[custom_id]
+            
+            # Try to delete the message
+            if view.roster_message:
+                try:
+                    await view.roster_message.delete()
+                except discord.HTTPException:
+                    pass
+            
+            await interaction.response.send_message(
+                f"✅ Roster deleted successfully.",
+                ephemeral=True
+            )
+            logger.info(f"Deleted roster {custom_id}")
+            
+        except ValueError:
+            await interaction.response.send_message(
+                "❌ Invalid message ID. Please provide a valid number.",
+                ephemeral=True
+            )
 
 
 async def setup(bot: commands.Bot):

@@ -9,6 +9,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
+from ..utils.database import Database
+
 logger = logging.getLogger("bot.giveaway")
 
 
@@ -35,6 +37,9 @@ class GiveawayView(discord.ui.View):
         
         self.entries.add(interaction.user.id)
         await interaction.response.send_message("You're entered!", ephemeral=True)
+        
+        # Save to database
+        await self.giveaway_cog.save_giveaway_to_db(self)
         
         # Update the embed with new entry count
         await self.update_embed()
@@ -101,19 +106,99 @@ class GiveawayView(discord.ui.View):
 class GiveawayCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.db = Database()
         self.active_giveaways: dict[str, GiveawayView] = {}
         self.giveaway_update_task.start()
+        self.bot.loop.create_task(self._restore_giveaways())
+        logger.info("GiveawayCog initialized")
 
     def cog_unload(self):
+        logger.info("Unloading GiveawayCog...")
         self.giveaway_update_task.cancel()
+    
+    async def cog_app_command_error(self, interaction: discord.Interaction, error: Exception):
+        # Handle errors in app commands
+        logger.error(f"Error in giveaway command: {error}", exc_info=True)
+        
+        error_message = f"❌ An error occurred: {str(error)}"
+        
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(error_message, ephemeral=True)
+            else:
+                await interaction.response.send_message(error_message, ephemeral=True)
+        except:
+            logger.error("Failed to send error message to user")
+    
+    async def _restore_giveaways(self):
+        # Restore giveaways from database on startup
+        await self.bot.wait_until_ready()
+        await self.db.initialize()
+        
+        giveaways_data = await self.db.load_giveaways()
+        logger.info(f"Restoring {len(giveaways_data)} giveaways from database")
+        
+        for data in giveaways_data:
+            try:
+                # Fetch the message
+                channel = self.bot.get_channel(data["channel_id"])
+                if not channel:
+                    logger.warning(f"Channel {data['channel_id']} not found for giveaway {data['custom_id']}")
+                    continue
+                
+                try:
+                    message = await channel.fetch_message(data["message_id"])
+                except discord.NotFound:
+                    logger.warning(f"Message {data['message_id']} not found, deleting giveaway {data['custom_id']}")
+                    await self.db.delete_giveaway(data["custom_id"])
+                    continue
+                
+                # Recreate the view
+                view = GiveawayView(
+                    prize=data["prize"],
+                    end_time=data["end_time"],
+                    giveaway_cog=self,
+                    custom_id=data["custom_id"]
+                )
+                view.entries = data["entries"]
+                view.message = message
+                view.is_ended = data["is_ended"]
+                
+                # Re-attach the view to the message
+                self.bot.add_view(view, message_id=message.id)
+                self.active_giveaways[data["custom_id"]] = view
+                
+                logger.info(f"Restored giveaway {data['custom_id']} with {len(view.entries)} entries")
+            except Exception as e:
+                logger.error(f"Failed to restore giveaway {data.get('custom_id', 'unknown')}: {e}")
+    
+    async def save_giveaway_to_db(self, view: GiveawayView):
+        # Save a giveaway to the database
+        if not view.message:
+            return
+        
+        await self.db.save_giveaway(
+            custom_id=view.custom_id,
+            prize=view.prize,
+            end_time=view.end_time,
+            channel_id=view.message.channel.id,
+            message_id=view.message.id,
+            entries=view.entries,
+            is_ended=view.is_ended
+        )
     
     @tasks.loop(seconds=5)
     async def giveaway_update_task(self):
-        """Background task to update all active giveaways every 5 seconds."""
+        # Background task to update all active giveaways every 5 seconds
         now = datetime.utcnow()
         ended_giveaways = []
         
         for custom_id, view in list(self.active_giveaways.items()):
+            # Skip if no valid message reference
+            if not view.message:
+                logger.warning(f"Skipping giveaway {custom_id}: no message reference")
+                continue
+                
             if now >= view.end_time and not view.is_ended:
                 # Giveaway has ended
                 view.is_ended = True
@@ -126,13 +211,14 @@ class GiveawayCog(commands.Cog):
         for custom_id, view in ended_giveaways:
             await self._end_giveaway(view)
             del self.active_giveaways[custom_id]
+            await self.db.delete_giveaway(custom_id)
     
     @giveaway_update_task.before_loop
     async def before_giveaway_update(self):
         await self.bot.wait_until_ready()
     
     async def _end_giveaway(self, view: GiveawayView):
-        """End a giveaway and announce the winner."""
+        # End a giveaway and announce the winner
         try:
             # Final update to show "Ended" status
             await view.update_embed()
@@ -163,29 +249,38 @@ class GiveawayCog(commands.Cog):
     @app_commands.command(name="giveaway_start", description="Start a giveaway (admin only)")
     @app_commands.describe(duration_minutes="Duration in minutes", prize="Description of the prize")
     async def giveaway_start(self, interaction: discord.Interaction, duration_minutes: int, prize: str):
-        if duration_minutes <= 0:
-            await interaction.response.send_message("Duration must be positive.", ephemeral=True)
-            return
+        try:
+            if duration_minutes <= 0:
+                await interaction.response.send_message("❌ Duration must be positive.", ephemeral=True)
+                return
 
-        # Calculate end time
-        end_time = datetime.utcnow() + timedelta(minutes=duration_minutes)
-        
-        # Create unique ID for this giveaway
-        custom_id = f"giveaway_{interaction.id}"
-        
-        view = GiveawayView(prize, end_time, self, custom_id)
-        embed = view._build_embed()
-        
-        await interaction.response.send_message(
-            embed=embed,
-            view=view,
-        )
-        
-        # Store message reference and register view
-        view.message = await interaction.original_response()
-        self.active_giveaways[custom_id] = view
-        
-        logger.info(f"Started giveaway '{prize}' for {duration_minutes} minutes")
+            # Calculate end time
+            end_time = datetime.utcnow() + timedelta(minutes=duration_minutes)
+            
+            # Create unique ID for this giveaway
+            custom_id = f"giveaway_{interaction.id}"
+            
+            logger.info(f"Creating giveaway: {prize} (duration: {duration_minutes}m, ID: {custom_id})")
+            
+            view = GiveawayView(prize, end_time, self, custom_id)
+            embed = view._build_embed()
+            
+            await interaction.response.send_message(
+                embed=embed,
+                view=view,
+            )
+            
+            # Store message reference and register view
+            view.message = await interaction.original_response()
+            self.active_giveaways[custom_id] = view
+            
+            # Save to database
+            await self.save_giveaway_to_db(view)
+            
+            logger.info(f"✅ Giveaway '{prize}' started successfully (ID: {custom_id})")
+        except Exception as e:
+            logger.error(f"Failed to start giveaway: {e}", exc_info=True)
+            raise
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(GiveawayCog(bot))
