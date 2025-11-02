@@ -96,15 +96,32 @@ class GiveawayView(discord.ui.View):
         
         embed = self._build_embed()
         try:
+            # Re-fetch message to get fresh reference that can be edited
+            try:
+                fresh_message = await self.message.channel.fetch_message(self.message.id)
+                self.message = fresh_message
+            except discord.NotFound:
+                logger.warning(f"Giveaway message {self.custom_id} was deleted")
+                self.message = None
+                return
+            except discord.Forbidden:
+                logger.error(f"No permission to fetch message for giveaway {self.custom_id}")
+                return
+            
+            # Edit the freshly fetched message
             await self.message.edit(embed=embed)
+            
+        except discord.Forbidden as e:
+            logger.error(f"No permission to edit giveaway message {self.custom_id}: {e}")
         except discord.HTTPException as e:
-            logger.error(f"Failed to update giveaway embed: {e}")
+            logger.error(f"Failed to update giveaway embed {self.custom_id}: {e}")
         except Exception as e:
-            logger.error(f"Unexpected error updating giveaway: {e}")
+            logger.error(f"Unexpected error updating giveaway {self.custom_id}: {e}")
 
 
 class GiveawayCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
+        from pathlib import Path
         self.bot = bot
         self.db = Database()
         self.active_giveaways: dict[str, GiveawayView] = {}

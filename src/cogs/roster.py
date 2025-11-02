@@ -290,6 +290,19 @@ class RosterMainView(discord.ui.View):
         embed = self._build_embed()
         
         try:
+            # Re-fetch message to get fresh reference that can be edited
+            try:
+                fresh_message = await self.roster_message.channel.fetch_message(self.roster_message.id)
+                self.roster_message = fresh_message
+            except discord.NotFound:
+                logger.warning(f"Roster message {self.custom_id} was deleted")
+                self.roster_message = None
+                return
+            except discord.Forbidden:
+                logger.error(f"No permission to fetch message for roster {self.custom_id}")
+                return
+            
+            # Edit the freshly fetched message
             await self.roster_message.edit(embed=embed)
         except discord.NotFound:
             logger.warning(f"Roster message {self.custom_id} was deleted")
@@ -302,7 +315,7 @@ class RosterMainView(discord.ui.View):
             else:
                 logger.error(f"Failed to update roster embed: {e}")
         except Exception as e:
-            logger.error(f"Unexpected error updating roster: {e}")
+            logger.error(f"Unexpected error updating roster {self.custom_id}: {e}")
 
     # builds roster with admin entered data
     def _build_embed(self) -> discord.Embed:
@@ -384,6 +397,7 @@ class RosterMainView(discord.ui.View):
 class RosterCog(commands.Cog):
     
     def __init__(self, bot: commands.Bot):
+        from pathlib import Path
         self.bot = bot
         self.db = Database()
         self.active_rosters: Dict[str, RosterMainView] = {}
