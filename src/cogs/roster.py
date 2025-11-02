@@ -487,8 +487,17 @@ class RosterCog(commands.Cog):
                             del self.active_rosters[custom_id]
                         except discord.HTTPException as e:
                             logger.error(f"Error refreshing roster {custom_id}: {e}")
+                        except OSError as e:
+                            # Network errors (DNS, connection issues)
+                            logger.warning(f"Network error refreshing roster {custom_id}: {e}. Will retry next cycle.")
             except Exception as e:
                 logger.error(f"Error in roster refresh task for {custom_id}: {e}")
+    
+    @roster_refresh_task.error
+    async def roster_refresh_task_error(self, error: Exception):
+        # Handle task-level errors to prevent task from stopping
+        logger.error(f"Roster refresh task encountered an error: {error}", exc_info=True)
+        # Task will automatically restart
     
     @roster_refresh_task.before_loop
     async def before_roster_refresh(self):
