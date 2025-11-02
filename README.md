@@ -20,14 +20,6 @@ A feature-rich Discord bot built for cybersecurity clubs and CTF communities.
 
 ---
 
-## 📋 Table of Contents
-- [Features](#features)
-- [Quick Start](#quick-start)
-- [Configuration](#configuration)
-- [Commands](#commands)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-
 ## ✨ Features
 
 | Feature | Description |
@@ -45,12 +37,11 @@ A feature-rich Discord bot built for cybersecurity clubs and CTF communities.
 
 ### Prerequisites
 - Python 3.10+
-- Discord bot token ([Create one here](https://discord.com/developers/applications))
+- Discord bot token
   - Enable **Server Members Intent** in Bot settings
-- Gmail account with [App Password](https://support.google.com/accounts/answer/185833) (for verification emails)
+- Gmail account with [App Password](https://support.google.com/accounts/answer/185833)
 
 ### Installation
-
 <details>
 <summary><b>Option 1: Python (Local)</b></summary>
 
@@ -78,12 +69,18 @@ cp .env.example .env
 cp .env.example .env
 # Edit .env with your values
 
+# Create data directory for persistence
+mkdir -p data
+
 # Run
 docker-compose up -d
 
 # View logs
-docker-compose logs -f
+docker-compose logs -f bot
 ```
+
+> 📘 **For detailed Docker setup, volume persistence, and troubleshooting, see [DOCKER.md](DOCKER.md)**
+
 </details>
 
 ## ⚙️ Configuration
@@ -133,9 +130,10 @@ CTFTIME_EVENTS_WINDOW_DAYS=7       # Days ahead for CTF events
 
 | Document | Description |
 |----------|-------------|
+| **[DOCKER.md](DOCKER.md)** | Complete Docker deployment guide with volume persistence |
+| **[DEPLOY.md](DEPLOY.md)** | General deployment instructions and checklist |
 | **[IMPROVEMENTS.md](IMPROVEMENTS.md)** | Feature overview and technical details |
 | **[LOGGING.md](LOGGING.md)** | Log format guide and debugging tips |
-| **[DEPLOY.md](DEPLOY.md)** | Deployment instructions and checklist |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | How to contribute to this project |
 | **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** | Community standards |
 
@@ -145,7 +143,7 @@ CTFTIME_EVENTS_WINDOW_DAYS=7       # Days ahead for CTF events
 <summary><b>Commands not appearing in Discord?</b></summary>
 
 - Set `GUILD_IDS` in `.env` for instant sync
-- Run `/sync` command (requires Manage Server permission)
+- Run `/sync` command
 - Wait up to 1 hour for global sync
 - Check bot has application commands scope in invite URL
 </details>
@@ -162,8 +160,18 @@ CTFTIME_EVENTS_WINDOW_DAYS=7       # Days ahead for CTF events
 <summary><b>Bot crashes on restart?</b></summary>
 
 - Check `data/` directory exists and is writable
+- For Docker: ensure volume is mounted (see [DOCKER.md](DOCKER.md))
 - Review logs for specific error messages
 - See [LOGGING.md](LOGGING.md) for log interpretation
+</details>
+
+<details>
+<summary><b>Database in /tmp warning?</b></summary>
+
+- Bot is using temporary storage - data will be lost on restart
+- Fix: Create `data/` directory with proper permissions
+- Docker: Add volume mount to `docker-compose.yml` (see [DOCKER.md](DOCKER.md))
+- Set `DATABASE_PATH` in `.env` if using custom location
 </details>
 
 > 💡 For more help, check [LOGGING.md](LOGGING.md) for common error patterns.
@@ -179,7 +187,7 @@ This project is licensed under the terms in [LICENSE](LICENSE).
 ---
 
 <p align="center">
-  Made with ❤️ for cybersecurity communities<br>
+  Vibed with ❤️ for cybersecurity communities<br>
   <a href="https://github.com/ktalons/cybersec-discord-bot/issues">Report Bug</a> •
   <a href="https://github.com/ktalons/cybersec-discord-bot/issues">Request Feature</a>
 </p>

@@ -35,9 +35,14 @@ class Config:
     calendar_channel_id: Optional[int]
     ctf_channel_id: Optional[int]
     ctftime_window_days: int
+    database_path: str
 
 
 def load_config() -> Config:
+    # Default database path for local development
+    from pathlib import Path
+    default_db_path = str(Path(__file__).parent.parent / "data" / "bot.db")
+    
     return Config(
         token=os.getenv("DISCORD_TOKEN", "").strip(),
         verify_domain=os.getenv("VERIFY_DOMAIN", "arizona.edu").strip(),
@@ -50,4 +55,5 @@ def load_config() -> Config:
         calendar_channel_id=int(os.getenv("CALENDAR_CHANNEL_ID", "0")) or None,
         ctf_channel_id=int(os.getenv("CTF_CHANNEL_ID", "0")) or None,
         ctftime_window_days=int(os.getenv("CTFTIME_EVENTS_WINDOW_DAYS", "7")),
+        database_path=os.getenv("DATABASE_PATH", default_db_path).strip(),
     )

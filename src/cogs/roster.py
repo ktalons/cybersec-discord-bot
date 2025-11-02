@@ -290,19 +290,27 @@ class RosterMainView(discord.ui.View):
         embed = self._build_embed()
         
         try:
-            await self.roster_message.edit(embed=embed)
-        except discord.NotFound:
-            logger.warning(f"Roster message {self.custom_id} was deleted")
-            self.roster_message = None
-        except discord.HTTPException as e:
-            # Check if it's a webhook token error (invalid message reference)
-            if e.status == 401 or "Webhook" in str(e):
-                logger.error(f"Invalid message reference for roster {self.custom_id}, will try to recover")
+            # Re-fetch message to get fresh reference that can be edited
+            try:
+                fresh_message = await self.roster_message.channel.fetch_message(self.roster_message.id)
+                self.roster_message = fresh_message
+            except discord.NotFound:
+                logger.warning(f"Roster message {self.custom_id} was deleted")
                 self.roster_message = None
-            else:
-                logger.error(f"Failed to update roster embed: {e}")
+                return
+            except discord.Forbidden:
+                logger.error(f"No permission to fetch message for roster {self.custom_id}")
+                return
+            
+            # Edit the freshly fetched message
+            await self.roster_message.edit(embed=embed)
+            
+        except discord.Forbidden as e:
+            logger.error(f"No permission to edit roster message {self.custom_id}: {e}")
+        except discord.HTTPException as e:
+            logger.error(f"Failed to update roster embed {self.custom_id}: {e}")
         except Exception as e:
-            logger.error(f"Unexpected error updating roster: {e}")
+            logger.error(f"Unexpected error updating roster {self.custom_id}: {e}")
 
     # builds roster with admin entered data
     def _build_embed(self) -> discord.Embed:
@@ -384,8 +392,9 @@ class RosterMainView(discord.ui.View):
 class RosterCog(commands.Cog):
     
     def __init__(self, bot: commands.Bot):
+        from pathlib import Path
         self.bot = bot
-        self.db = Database()
+        self.db = Database(Path(bot.config.database_path))
         self.active_rosters: Dict[str, RosterMainView] = {}
         self.roster_refresh_task.start()
         self.bot.loop.create_task(self._restore_rosters())
