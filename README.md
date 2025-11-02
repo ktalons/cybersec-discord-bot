@@ -42,7 +42,6 @@ A feature-rich Discord bot built for cybersecurity clubs and CTF communities.
 - Gmail account with [App Password](https://support.google.com/accounts/answer/185833)
 
 ### Installation
-
 <details>
 <summary><b>Option 1: Python (Local)</b></summary>
 
