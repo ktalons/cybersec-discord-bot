@@ -304,11 +304,16 @@ class RosterMainView(discord.ui.View):
             
             # Edit the freshly fetched message
             await self.roster_message.edit(embed=embed)
-            
-        except discord.Forbidden as e:
-            logger.error(f"No permission to edit roster message {self.custom_id}: {e}")
+        except discord.NotFound:
+            logger.warning(f"Roster message {self.custom_id} was deleted")
+            self.roster_message = None
         except discord.HTTPException as e:
-            logger.error(f"Failed to update roster embed {self.custom_id}: {e}")
+            # Check if it's a webhook token error (invalid message reference)
+            if e.status == 401 or "Webhook" in str(e):
+                logger.error(f"Invalid message reference for roster {self.custom_id}, will try to recover")
+                self.roster_message = None
+            else:
+                logger.error(f"Failed to update roster embed: {e}")
         except Exception as e:
             logger.error(f"Unexpected error updating roster {self.custom_id}: {e}")
 
@@ -394,7 +399,7 @@ class RosterCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         from pathlib import Path
         self.bot = bot
-        self.db = Database(Path(bot.config.database_path))
+        self.db = Database()
         self.active_rosters: Dict[str, RosterMainView] = {}
         self.roster_refresh_task.start()
         self.bot.loop.create_task(self._restore_rosters())
@@ -496,8 +501,17 @@ class RosterCog(commands.Cog):
                             del self.active_rosters[custom_id]
                         except discord.HTTPException as e:
                             logger.error(f"Error refreshing roster {custom_id}: {e}")
+                        except OSError as e:
+                            # Network errors (DNS, connection issues)
+                            logger.warning(f"Network error refreshing roster {custom_id}: {e}. Will retry next cycle.")
             except Exception as e:
                 logger.error(f"Error in roster refresh task for {custom_id}: {e}")
+    
+    @roster_refresh_task.error
+    async def roster_refresh_task_error(self, error: Exception):
+        # Handle task-level errors to prevent task from stopping
+        logger.error(f"Roster refresh task encountered an error: {error}", exc_info=True)
+        # Task will automatically restart
     
     @roster_refresh_task.before_loop
     async def before_roster_refresh(self):

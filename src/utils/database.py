@@ -9,11 +9,13 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger("bot.database")
 
+# Default database path
+DB_PATH = Path(__file__).parent.parent.parent / "data" / "bot.db"
+
 
 class Database:
     # Async SQLite database wrapper for bot persistence
-    
-    def __init__(self, db_path: Path):
+    def __init__(self, db_path: Path = DB_PATH):
         self.db_path = db_path
     
     async def initialize(self):

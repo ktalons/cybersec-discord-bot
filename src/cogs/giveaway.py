@@ -123,7 +123,7 @@ class GiveawayCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         from pathlib import Path
         self.bot = bot
-        self.db = Database(Path(bot.config.database_path))
+        self.db = Database()
         self.active_giveaways: dict[str, GiveawayView] = {}
         self.giveaway_update_task.start()
         self.database_cleanup_task.start()
@@ -213,28 +213,43 @@ class GiveawayCog(commands.Cog):
         ended_giveaways = []
         
         for custom_id, view in list(self.active_giveaways.items()):
-            # Skip if no valid message reference
-            if not view.message:
-                logger.warning(f"Skipping giveaway {custom_id}: no message reference")
-                continue
-                
-            if now >= view.end_time and not view.is_ended:
-                # Giveaway has ended
-                view.is_ended = True
-                ended_giveaways.append((custom_id, view))
-            elif not view.is_ended:
-                # Update countdown
-                await view.update_embed()
+            try:
+                # Skip if no valid message reference
+                if not view.message:
+                    logger.warning(f"Skipping giveaway {custom_id}: no message reference")
+                    continue
+                    
+                if now >= view.end_time and not view.is_ended:
+                    # Giveaway has ended
+                    view.is_ended = True
+                    ended_giveaways.append((custom_id, view))
+                elif not view.is_ended:
+                    # Update countdown
+                    await view.update_embed()
+            except OSError as e:
+                # Network errors (DNS, connection issues)
+                logger.warning(f"Network error updating giveaway {custom_id}: {e}. Will retry next cycle.")
+            except Exception as e:
+                logger.error(f"Error updating giveaway {custom_id}: {e}")
         
         # Process ended giveaways
         for custom_id, view in ended_giveaways:
-            await self._end_giveaway(view)
-            del self.active_giveaways[custom_id]
-            await self.db.delete_giveaway(custom_id)
+            try:
+                await self._end_giveaway(view)
+                del self.active_giveaways[custom_id]
+                await self.db.delete_giveaway(custom_id)
+            except Exception as e:
+                logger.error(f"Error ending giveaway {custom_id}: {e}")
     
     @giveaway_update_task.before_loop
     async def before_giveaway_update(self):
         await self.bot.wait_until_ready()
+    
+    @giveaway_update_task.error
+    async def giveaway_update_task_error(self, error: Exception):
+        # Handle task-level errors to prevent task from stopping
+        logger.error(f"Giveaway update task encountered an error: {error}", exc_info=True)
+        # Task will automatically restart
     
     @tasks.loop(hours=24)
     async def database_cleanup_task(self):
