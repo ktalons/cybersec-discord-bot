@@ -165,6 +165,10 @@ class RosterMainView(discord.ui.View):
         self.roster_message: Optional[discord.Message] = None
         self.channel_id: Optional[int] = None
         self.message_id: Optional[int] = None
+        
+        # Rate limit tracking
+        self._last_update: float = 0
+        self._update_cooldown: float = 3.0  # 3 seconds between updates
     
     @discord.ui.button(label="I'm Interested!", style=discord.ButtonStyle.primary, emoji="✋", custom_id="roster_interested")
     async def interested_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -271,7 +275,16 @@ class RosterMainView(discord.ui.View):
             raise
 
     # Updates the roster embed with current participants
-    async def update_roster_display(self):
+    async def update_roster_display(self, force: bool = False):
+        import time
+        import asyncio
+        
+        # Rate limit check
+        now = time.time()
+        if not force and (now - self._last_update) < self._update_cooldown:
+            logger.debug(f"Skipping roster update for {self.custom_id} - rate limited")
+            return
+        
         if not self.roster_message:
             # Try to recover message reference if we have IDs
             if self.channel_id and self.message_id:
@@ -290,26 +303,22 @@ class RosterMainView(discord.ui.View):
         embed = self._build_embed()
         
         try:
-            # Re-fetch message to get fresh reference that can be edited
-            try:
-                fresh_message = await self.roster_message.channel.fetch_message(self.roster_message.id)
-                self.roster_message = fresh_message
-            except discord.NotFound:
-                logger.warning(f"Roster message {self.custom_id} was deleted")
-                self.roster_message = None
-                return
-            except discord.Forbidden:
-                logger.error(f"No permission to fetch message for roster {self.custom_id}")
-                return
-            
-            # Edit the freshly fetched message
+            # Edit the message directly
             await self.roster_message.edit(embed=embed)
+            self._last_update = now
         except discord.NotFound:
             logger.warning(f"Roster message {self.custom_id} was deleted")
             self.roster_message = None
+        except discord.Forbidden as e:
+            logger.error(f"No permission to edit roster message {self.custom_id}: {e}")
         except discord.HTTPException as e:
-            # Check if it's a webhook token error (invalid message reference)
-            if e.status == 401 or "Webhook" in str(e):
+            # Handle rate limits with exponential backoff
+            if e.status == 429:
+                retry_after = e.response.headers.get('Retry-After', 5)
+                logger.warning(f"Rate limited on roster {self.custom_id}. Retry after {retry_after}s")
+                # Don't retry here - let the next interaction handle it
+                return
+            elif e.status == 401 or "Webhook" in str(e):
                 logger.error(f"Invalid message reference for roster {self.custom_id}, will try to recover")
                 self.roster_message = None
             else:
@@ -483,35 +492,47 @@ class RosterCog(commands.Cog):
             thumbnail=view.thumbnail
         )
     
-    @tasks.loop(minutes=2)
+    @tasks.loop(hours=1)
     async def roster_refresh_task(self):
-        # Background task to keep roster views alive and refreshed
+        # Background task to validate rosters periodically (not refresh messages)
+        # This only checks if messages still exist, doesn't update them
+        logger.info(f"Running roster validation check for {len(self.active_rosters)} rosters")
+        
         for custom_id, view in list(self.active_rosters.items()):
             try:
-                # Ensure message reference is still valid
-                if view.roster_message and view.channel_id and view.message_id:
-                    # Verify the message still exists
+                # Only verify message existence, don't fetch/update
+                if view.channel_id and view.message_id:
                     channel = self.bot.get_channel(view.channel_id)
-                    if channel:
+                    if not channel:
+                        logger.warning(f"Channel missing for roster {custom_id}, removing from active rosters")
+                        del self.active_rosters[custom_id]
+                        continue
+                    
+                    # Light check - only verify if message was deleted
+                    # Don't fetch message unless necessary
+                    if not view.roster_message:
                         try:
                             message = await channel.fetch_message(view.message_id)
                             view.roster_message = message
+                            logger.info(f"Recovered message reference for roster {custom_id}")
                         except discord.NotFound:
-                            logger.warning(f"Roster message {custom_id} was deleted")
+                            logger.warning(f"Roster message {custom_id} was deleted, removing from active rosters")
+                            await self.db.delete_roster(custom_id)
                             del self.active_rosters[custom_id]
                         except discord.HTTPException as e:
-                            logger.error(f"Error refreshing roster {custom_id}: {e}")
+                            if e.status != 429:  # Ignore rate limits here
+                                logger.error(f"Error validating roster {custom_id}: {e}")
                         except OSError as e:
-                            # Network errors (DNS, connection issues)
-                            logger.warning(f"Network error refreshing roster {custom_id}: {e}. Will retry next cycle.")
+                            logger.warning(f"Network error validating roster {custom_id}: {e}")
             except Exception as e:
-                logger.error(f"Error in roster refresh task for {custom_id}: {e}")
+                logger.error(f"Error in roster validation for {custom_id}: {e}")
+        
+        logger.info(f"Roster validation complete. {len(self.active_rosters)} active rosters")
     
     @roster_refresh_task.error
     async def roster_refresh_task_error(self, error: Exception):
         # Handle task-level errors to prevent task from stopping
-        logger.error(f"Roster refresh task encountered an error: {error}", exc_info=True)
-        # Task will automatically restart
+        logger.error(f"Roster validation task encountered an error: {error}", exc_info=True)
     
     @roster_refresh_task.before_loop
     async def before_roster_refresh(self):
