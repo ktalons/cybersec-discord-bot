@@ -79,7 +79,7 @@ docker-compose up -d
 docker-compose logs -f bot
 ```
 
-> 📘 **For detailed Docker setup, volume persistence, and troubleshooting, see [DOCKER.md](DOCKER.md)**
+> 📘 **For detailed Docker setup, volume persistence, and troubleshooting, see [docs/DOCKER.md](docs/DOCKER.md)**
 
 </details>
 
@@ -130,12 +130,13 @@ CTFTIME_EVENTS_WINDOW_DAYS=7       # Days ahead for CTF events
 
 | Document | Description |
 |----------|-------------|
-| **[DOCKER.md](DOCKER.md)** | Complete Docker deployment guide with volume persistence |
-| **[DEPLOY.md](DEPLOY.md)** | General deployment instructions and checklist |
-| **[IMPROVEMENTS.md](IMPROVEMENTS.md)** | Feature overview and technical details |
-| **[LOGGING.md](LOGGING.md)** | Log format guide and debugging tips |
-| **[CONTRIBUTING.md](CONTRIBUTING.md)** | How to contribute to this project |
-| **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** | Community standards |
+| **[DOCKER.md](docs/DOCKER.md)** | Complete Docker deployment guide with volume persistence |
+| **[DEPLOY.md](docs/DEPLOY.md)** | General deployment instructions and checklist |
+| **[IMPROVEMENTS.md](docs/IMPROVEMENTS.md)** | Feature overview and technical details |
+| **[LOGGING.md](docs/LOGGING.md)** | Log format guide and debugging tips |
+| **[DATABASE_CLEANUP.md](docs/DATABASE_CLEANUP.md)** | Database maintenance and cleanup information |
+| **[CONTRIBUTING.md](docs/CONTRIBUTING.md)** | How to contribute to this project |
+| **[CODE_OF_CONDUCT.md](docs/CODE_OF_CONDUCT.md)** | Community standards |
 
 ## 🔧 Troubleshooting
 
@@ -160,9 +161,9 @@ CTFTIME_EVENTS_WINDOW_DAYS=7       # Days ahead for CTF events
 <summary><b>Bot crashes on restart?</b></summary>
 
 - Check `data/` directory exists and is writable
-- For Docker: ensure volume is mounted (see [DOCKER.md](DOCKER.md))
+- For Docker: ensure volume is mounted (see [docs/DOCKER.md](docs/DOCKER.md))
 - Review logs for specific error messages
-- See [LOGGING.md](LOGGING.md) for log interpretation
+- See [docs/LOGGING.md](docs/LOGGING.md) for log interpretation
 </details>
 
 <details>
@@ -170,15 +171,15 @@ CTFTIME_EVENTS_WINDOW_DAYS=7       # Days ahead for CTF events
 
 - Bot is using temporary storage - data will be lost on restart
 - Fix: Create `data/` directory with proper permissions
-- Docker: Add volume mount to `docker-compose.yml` (see [DOCKER.md](DOCKER.md))
+- Docker: Add volume mount to `docker-compose.yml` (see [docs/DOCKER.md](docs/DOCKER.md))
 - Set `DATABASE_PATH` in `.env` if using custom location
 </details>
 
-> 💡 For more help, check [LOGGING.md](LOGGING.md) for common error patterns.
+> 💡 For more help, check [docs/LOGGING.md](docs/LOGGING.md) for common error patterns.
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome! Please read [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 ## 📄 License
 
