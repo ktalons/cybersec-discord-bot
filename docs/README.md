@@ -1,16 +1,64 @@
-# Demo assets
+# 📚 Documentation Index
 
-This folder holds media referenced by the README.
+Welcome to the Cybersec Discord Bot documentation! This folder contains comprehensive guides and references for deploying, maintaining, and contributing to the bot.
 
-## Files
-- demo.gif — Placeholder GIF used in the README’s Demo section.
-- screenshot.png — Optional static screenshot if you prefer PNG/JPEG instead of a GIF.
+## 📖 Quick Navigation
 
-## Recommendations
-- Keep GIFs under ~2–3 MB for fast loading on GitHub.
-- Suggested dimensions: 1200×675 or 1280×720 (16:9) for readability, or crop to focus on the relevant UI.
-- For recordings, tools like Kap (macOS), OBS, or ScreenToGif (Windows) work well. You can also convert short MP4 clips to GIFs with tools like ffmpeg or gifski.
+### Getting Started
+- **[Main README](../README.md)** - Start here! Features, quick start, and basic configuration
+- **[DEPLOY.md](DEPLOY.md)** - Production deployment guide for servers
 
-## Updating the README
-- Replace demo.gif with your real demonstration (keep the same filename to avoid changing the README).
-- If you add screenshot.png, update the image link in README if you want to reference it explicitly.
+### Docker & Deployment  
+- **[DOCKER.md](DOCKER.md)** - Complete Docker setup with persistence and troubleshooting
+- **[DEPLOY.md](DEPLOY.md)** - General deployment instructions and checklist
+
+### Technical Documentation
+- **[IMPROVEMENTS.md](IMPROVEMENTS.md)** - v2.0 features: database persistence, error handling
+- **[LOGGING.md](LOGGING.md)** - Log format, debugging tips, and monitoring
+- **[DATABASE_CLEANUP.md](DATABASE_CLEANUP.md)** - Database maintenance and cleanup schedule
+
+### Contributing
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - How to contribute code, issues, and PRs
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** - Community guidelines and standards
+
+---
+
+## 🎯 Common Tasks
+
+| I want to... | Read this |
+|--------------|-----------|
+| Deploy the bot for the first time | [Main README](../README.md) → [DEPLOY.md](DEPLOY.md) |
+| Run the bot in Docker | [DOCKER.md](DOCKER.md) |
+| Understand what changed in v2.0 | [IMPROVEMENTS.md](IMPROVEMENTS.md) |
+| Debug issues or errors | [LOGGING.md](LOGGING.md) |
+| Contribute to the project | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Configure database settings | [DOCKER.md](DOCKER.md#database-persistence) |
+| Understand database cleanup | [DATABASE_CLEANUP.md](DATABASE_CLEANUP.md) |
+
+---
+
+## 🔄 Version History
+
+### v2.0 (Current)
+- ✅ Database persistence (SQLite)
+- ✅ Multi-day giveaways and rosters
+- ✅ Network error resilience  
+- ✅ Enhanced logging and monitoring
+- ✅ Automatic database cleanup (60 days)
+- ✅ Fixed webhook token errors
+
+See [IMPROVEMENTS.md](IMPROVEMENTS.md) for full details.
+
+---
+
+## 🆘 Need Help?
+
+1. Check [LOGGING.md](LOGGING.md) for error interpretation
+2. Review [DOCKER.md](DOCKER.md) troubleshooting section
+3. Open an issue on [GitHub](https://github.com/ktalons/cybersec-discord-bot/issues)
+
+---
+
+<p align="center">
+  <a href="../README.md">← Back to Main README</a>
+</p>

@@ -506,7 +506,7 @@ Look for:
 
 ### More Resources
 
-- **[README.md](README.md)** - Quick start and features
+- **[README.md](../README.md)** - Quick start and features
 - **[DEPLOY.md](DEPLOY.md)** - General deployment guide
 - **[LOGGING.md](LOGGING.md)** - Log interpretation
 - **[IMPROVEMENTS.md](IMPROVEMENTS.md)** - Technical details

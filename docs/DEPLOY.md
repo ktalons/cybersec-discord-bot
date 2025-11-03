@@ -4,11 +4,13 @@
 
 ✅ **Database persistence** - SQLite storage for giveaways/rosters  
 ✅ **Multi-day support** - Giveaways and rosters survive restarts  
+✅ **Network resilience** - Survives temporary DNS/connection failures  
 ✅ **Fixed webhook errors** - No more 401 errors after 15 minutes  
 ✅ **Comprehensive logging** - Detailed status updates and error tracking  
-✅ **Error handling** - Graceful failure recovery  
+✅ **Error handling** - Graceful failure recovery with automatic retries  
+✅ **Database cleanup** - Automatic cleanup of old entries (60+ days)  
 ✅ **Fixed /sync command** - Now works correctly  
-✅ **New admin commands** - `/roster_delete`  
+✅ **New admin commands** - `/roster_delete`
 
 ## Ubuntu Server Deployment
 
@@ -106,7 +108,11 @@ Watch logs for the first 10-15 minutes:
 docker logs cybersec-bot -f 2>&1 | grep "ERROR\|CRITICAL\|❌"
 ```
 
-Should see NO webhook token errors (401).
+**Expected behavior:**
+- ✅ No webhook token errors (401)
+- ✅ No task crashes from network errors
+- ✅ Giveaways/rosters restore successfully
+- ✅ Database cleanup task scheduled
 
 ## Rollback Plan
 
@@ -166,9 +172,9 @@ docker-compose up -d
 ## Need Help?
 
 Check these files:
-- `IMPROVEMENTS.md` - Feature details
-- `LOGGING.md` - Log interpretation guide
-- `README.md` - Original setup instructions
+- [IMPROVEMENTS.md](IMPROVEMENTS.md) - Feature details
+- [LOGGING.md](LOGGING.md) - Log interpretation guide
+- [../README.md](../README.md) - Original setup instructions
 
 
 Enjoy your improved bot! 🎉

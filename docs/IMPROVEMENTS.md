@@ -42,7 +42,33 @@ Added SQLite database persistence to giveaways and rosters so they survive bot r
 - Recreates views and re-attaches them to the original Discord messages
 - Participants can continue joining/leaving as normal
 
-### 4. Requirements Update
+### 4. Network Error Resilience
+**Features:**
+- ✅ OSError handling for DNS/connection failures
+- ✅ Task-level error handlers prevent crashes
+- ✅ Automatic retry on next cycle
+- ✅ Non-critical errors logged as warnings
+
+**How it works:**
+- Background tasks (giveaway updates, roster refresh) now catch network errors
+- Bot continues running during temporary network outages
+- Tasks automatically resume when connectivity returns
+- Prevents the bot from crashing due to transient failures
+
+### 5. Database Cleanup
+**Features:**
+- ✅ Automatic cleanup every 24 hours
+- ✅ Removes giveaway entries older than 60 days
+- ✅ Prevents database bloat
+- ✅ Configurable retention period
+
+**How it works:**
+- Daily background task runs cleanup
+- Only removes **ended** giveaways (active ones preserved)
+- Rosters can be manually deleted with `/roster_delete`
+- See [DATABASE_CLEANUP.md](DATABASE_CLEANUP.md) for details
+
+### 6. Requirements Update
 Added `aiosqlite>=0.19.0` to requirements.txt
 
 ## Installation
@@ -68,8 +94,11 @@ This file is created automatically on first run. You can back it up to preserve 
 
 1. **Webhook Token Errors**: Fixed the 401 errors that occurred after bot restarts
 2. **Message Recovery**: Both cogs now attempt to recover message references using stored IDs
-3. **Cleanup**: Automatically removes database entries for deleted messages
-4. **Logging**: Better logging for debugging startup restoration and errors
+3. **Network Resilience**: Handles temporary DNS/connection failures gracefully
+4. **Task Protection**: Background tasks have error handlers to prevent crashes
+5. **Cleanup**: Automatically removes database entries for deleted messages
+6. **Logging**: Better logging for debugging startup restoration and errors
+7. **Permission Handling**: Graceful fallback when database directory can't be created
 
 ## Testing Recommendations
 
