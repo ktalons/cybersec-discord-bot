@@ -63,6 +63,12 @@ Guild-specific sync for 1 guild(s)
 - Participant changes: Database saves logged
 - Refresh task: Message validation every 2 minutes
 
+### Calendar
+- Minute loop: checks feed every minute
+- Reminder sent: `Posted 60‑minute reminder for event: <title>`
+- Fetch errors: `Calendar fetch failed: HTTP <code>` or `Calendar fetch error: <msg>`
+- Timezone: TZID from ICS is honored; all‑day events are skipped
+
 ### Command Sync
 - Per-guild sync: `✅ Synced 8 command(s) to guild 123456789`
 - Global sync: `✅ Globally synced 8 command(s)`
@@ -145,6 +151,7 @@ If you do, the message reference recovery will kick in.
 ✅ Successfully loaded [cog]
 ✅ Synced [n] command(s)
 🚀 Bot is ready and operational!
+📅 Posted 60‑minute reminder for event: ...
 ```
 
 **Warning Signs:**
@@ -178,6 +185,9 @@ docker logs cybersec-bot 2>&1 | grep "giveaway"
 
 # Only rosters
 docker logs cybersec-bot 2>&1 | grep "roster"
+
+# Only calendar
+docker logs cybersec-bot 2>&1 | grep "calendar"
 ```
 
 ## Graceful Shutdown

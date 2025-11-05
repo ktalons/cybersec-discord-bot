@@ -10,7 +10,8 @@
 ✅ **Error handling** - Graceful failure recovery with automatic retries  
 ✅ **Database cleanup** - Automatic cleanup of old entries (60+ days)  
 ✅ **Fixed /sync command** - Now works correctly  
-✅ **New admin commands** - `/roster_delete`
+✅ **New admin commands** - `/roster_delete`  
+✅ **Calendar reminders** - 60‑minute reminders with TZID timezone support
 
 ## Ubuntu Server Deployment
 
@@ -96,6 +97,11 @@ In Discord:
 - ✅ `/roster_start` - Create a test roster
 - ✅ `/sync` - Should work without errors
 
+### 3b. Test Calendar Reminders
+- Create a calendar event ~61 minutes in the future in your ICS
+- Watch logs for: `Posted 60‑minute reminder`
+- Confirm the reminder embed appears in your configured channel
+
 ### 4. Test Persistence
 1. Create a giveaway/roster
 2. Restart the bot
@@ -113,6 +119,7 @@ docker logs cybersec-bot -f 2>&1 | grep "ERROR\|CRITICAL\|❌"
 - ✅ No task crashes from network errors
 - ✅ Giveaways/rosters restore successfully
 - ✅ Database cleanup task scheduled
+- ✅ Calendar: 60‑minute reminder logs and embeds appear on time
 
 ## Rollback Plan
 

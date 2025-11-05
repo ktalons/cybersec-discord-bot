@@ -262,6 +262,14 @@ class RosterMainView(discord.ui.View):
             self.roster_message = await interaction.original_response()
             self.channel_id = interaction.channel_id
             self.message_id = self.roster_message.id
+
+            # Convert InteractionMessage to a regular Message immediately to avoid webhook-token expiry
+            try:
+                channel = interaction.channel or self.cog.bot.get_channel(self.channel_id)
+                if channel:
+                    self.roster_message = await channel.fetch_message(self.message_id)
+            except Exception as conv_e:
+                logger.warning(f"Could not convert roster message to regular Message: {conv_e}")
             
             # Register this view with the cog
             self.cog.active_rosters[self.custom_id] = self
@@ -319,8 +327,23 @@ class RosterMainView(discord.ui.View):
                 # Don't retry here - let the next interaction handle it
                 return
             elif e.status == 401 or "Webhook" in str(e):
-                logger.error(f"Invalid message reference for roster {self.custom_id}, will try to recover")
+                # If the original interaction webhook token expired, recover and retry once
+                logger.error(f"Invalid message reference for roster {self.custom_id}, attempting recovery and retry")
                 self.roster_message = None
+                if self.channel_id and self.message_id:
+                    try:
+                        channel = self.cog.bot.get_channel(self.channel_id)
+                        if channel:
+                            self.roster_message = await channel.fetch_message(self.message_id)
+                            logger.info(f"Recovered message reference for roster {self.custom_id}, retrying update")
+                            await self.roster_message.edit(embed=embed)
+                            self._last_update = now
+                            return
+                    except Exception as rec_e:
+                        logger.error(f"Failed to recover roster message: {rec_e}")
+                        return
+                # If we couldn't recover, just return and let future interactions try again
+                return
             else:
                 logger.error(f"Failed to update roster embed: {e}")
         except Exception as e:
