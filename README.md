@@ -27,7 +27,7 @@ A feature-rich Discord bot built for cybersecurity clubs and CTF communities.
 | 🔐 **Email Verification** | Gate server access with domain-based email verification |
 | 👥 **CTF Rosters** | Create team rosters with skill levels (Rookie/Intermediate/Veteran) |
 | 🎉 **Giveaways** | Interactive raffles with live countdown and entry tracking |
-| 📅 **Calendar Integration** | Auto-post events from Google Calendar (ICS) |
+|| 📅 **Calendar Integration** | Auto-post events and 60‑minute reminders from Google Calendar (ICS) |
 | 🚩 **CTFtime Events** | Announce upcoming CTF competitions |
 | 💾 **Database Persistence** | SQLite storage - survives restarts, supports multi-day events |
 | 📊 **Enhanced Logging** | Comprehensive status updates and error tracking |
@@ -122,7 +122,7 @@ CTFTIME_EVENTS_WINDOW_DAYS=7       # Days ahead for CTF events
 | `/sync` | Force slash command sync |
 
 ### Background Tasks
-- ⏰ **Hourly** - Calendar event checks
+- ⏰ **Every minute** - Calendar reminders (T‑60m before start)
 - ⏰ **Every 2 hours** - CTFtime event checks
 - ⏰ **Daily** - Database cleanup (removes entries 60+ days old)
 
@@ -173,6 +173,15 @@ CTFTIME_EVENTS_WINDOW_DAYS=7       # Days ahead for CTF events
 - Fix: Create `data/` directory with proper permissions
 - Docker: Add volume mount to `docker-compose.yml` (see [docs/DOCKER.md](docs/DOCKER.md))
 - Set `DATABASE_PATH` in `.env` if using custom location
+</details>
+
+<details>
+<summary><b>Calendar reminders not posting?</b></summary>
+
+- Ensure `CALENDAR_ICS_URL` is publicly accessible and `CALENDAR_CHANNEL_ID` is set
+- Event must not be all‑day and should be at least 60 minutes in the future
+- ICS should include correct timezone (TZID) if not UTC
+- Check logs for: `Posted 60‑minute reminder`
 </details>
 
 > 💡 For more help, check [docs/LOGGING.md](docs/LOGGING.md) for common error patterns.

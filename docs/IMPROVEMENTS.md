@@ -71,6 +71,19 @@ Added SQLite database persistence to giveaways and rosters so they survive bot r
 ### 6. Requirements Update
 Added `aiosqlite>=0.19.0` to requirements.txt
 
+### 7. Calendar Enhancements (`src/cogs/calendar.py`)
+**Features:**
+- ✅ 60‑minute reminders before events
+- ✅ Minute-level loop for reliable timing
+- ✅ ICS parsing improvements (line unfolding, TZID timezone support)
+- ✅ Skips all‑day events to avoid spam
+- ✅ New embed: "Cyber Saguaros Calendar Event" with Event, Date & Time, Location, Description
+
+**How it works:**
+- The bot fetches the ICS every minute
+- For each event, it posts exactly once at T‑60 minutes
+- Timezones are converted to UTC using TZID when provided
+
 ## Installation
 
 1. Update dependencies:
@@ -92,13 +105,14 @@ This file is created automatically on first run. You can back it up to preserve 
 
 ## Error Handling Improvements
 
-1. **Webhook Token Errors**: Fixed the 401 errors that occurred after bot restarts
-2. **Message Recovery**: Both cogs now attempt to recover message references using stored IDs
-3. **Network Resilience**: Handles temporary DNS/connection failures gracefully
-4. **Task Protection**: Background tasks have error handlers to prevent crashes
-5. **Cleanup**: Automatically removes database entries for deleted messages
-6. **Logging**: Better logging for debugging startup restoration and errors
-7. **Permission Handling**: Graceful fallback when database directory can't be created
+1. **Webhook Token Errors**: Fixed the 401 errors that occurred after bot restarts (affecting rosters)
+2. **Message Recovery**: Cogs recover message references using stored IDs and retry
+3. **Calendar Reliability**: TZID-aware time parsing and 1‑minute loop ensure reminders fire on time
+4. **Network Resilience**: Handles temporary DNS/connection failures gracefully
+5. **Task Protection**: Background tasks have error handlers to prevent crashes
+6. **Cleanup**: Automatically removes database entries for deleted messages
+7. **Logging**: Better logging for debugging startup restoration and errors
+8. **Permission Handling**: Graceful fallback when database directory can't be created
 
 ## Testing Recommendations
 
