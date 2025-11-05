@@ -27,7 +27,7 @@ A feature-rich Discord bot built for cybersecurity clubs and CTF communities.
 | 🔐 **Email Verification** | Gate server access with domain-based email verification |
 | 👥 **CTF Rosters** | Create team rosters with skill levels (Rookie/Intermediate/Veteran) |
 | 🎉 **Giveaways** | Interactive raffles with live countdown and entry tracking |
-|| 📅 **Calendar Integration** | Auto-post events and 60‑minute reminders from Google Calendar (ICS) |
+| 📅 **Calendar Integration** | Auto-post events from Google Calendar (ICS) |
 | 🚩 **CTFtime Events** | Announce upcoming CTF competitions |
 | 💾 **Database Persistence** | SQLite storage - survives restarts, supports multi-day events |
 | 📊 **Enhanced Logging** | Comprehensive status updates and error tracking |
