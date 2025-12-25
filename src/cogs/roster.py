@@ -151,6 +151,10 @@ class RosterMainView(discord.ui.View):
         self.cog = cog
         self.custom_id = custom_id
         
+        # Ensure component custom_ids are unique per roster to prevent cross-roster collisions
+        self.interested_button.custom_id = f"roster_interested:{custom_id}"
+        self.remove_button.custom_id = f"roster_remove:{custom_id}"
+        
         # Roster configuration
         self.title: str = ""
         self.date_time: str = ""
@@ -270,6 +274,12 @@ class RosterMainView(discord.ui.View):
                     self.roster_message = await channel.fetch_message(self.message_id)
             except Exception as conv_e:
                 logger.warning(f"Could not convert roster message to regular Message: {conv_e}")
+            
+            # Explicitly register persistent view for this message to avoid dispatcher mixing rosters
+            try:
+                self.cog.bot.add_view(self, message_id=self.message_id)
+            except Exception as reg_e:
+                logger.warning(f"Failed to register roster view {self.custom_id}: {reg_e}")
             
             # Register this view with the cog
             self.cog.active_rosters[self.custom_id] = self
@@ -489,6 +499,20 @@ class RosterCog(commands.Cog):
                 view.roster_message = message
                 view.channel_id = data["channel_id"]
                 view.message_id = data["message_id"]
+
+                # Align button custom_ids with the message (supports legacy static IDs)
+                try:
+                    for row in getattr(message, "components", []):
+                        for component in getattr(row, "children", []):
+                            cid = getattr(component, "custom_id", None)
+                            if not cid:
+                                continue
+                            if cid.startswith("roster_interested"):
+                                view.interested_button.custom_id = cid
+                            elif cid.startswith("roster_remove"):
+                                view.remove_button.custom_id = cid
+                except Exception as cid_e:
+                    logger.warning(f"Could not sync custom IDs for roster {data['custom_id']}: {cid_e}")
                 
                 # Re-attach the view to the message
                 self.bot.add_view(view, message_id=message.id)
