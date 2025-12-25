@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 import asyncio
-import random
 import logging
-from typing import List, Set, Optional
-from datetime import datetime, timedelta
+import random
+from datetime import datetime, timedelta, timezone
+from typing import List, Optional, Set
 
 import discord
 from discord import app_commands
@@ -19,7 +20,11 @@ class GiveawayView(discord.ui.View):
         super().__init__(timeout=None)  # Persistent view
         self.entries: Set[int] = set()
         self.prize = prize
-        self.end_time = end_time
+        # Normalize end_time to UTC-aware to keep timestamp rendering correct across hosts
+        if end_time.tzinfo is None:
+            self.end_time = end_time.replace(tzinfo=timezone.utc)
+        else:
+            self.end_time = end_time.astimezone(timezone.utc)
         self.message: Optional[discord.Message] = None
         self.giveaway_cog = giveaway_cog
         self.custom_id = custom_id
@@ -51,42 +56,29 @@ class GiveawayView(discord.ui.View):
             description=f"**Prize:** {self.prize}\n\nClick the button below to enter!",
             color=discord.Color.gold(),
         )
-        
+
         # Add entry count
         embed.add_field(
             name="👥 Entries",
             value=str(len(self.entries)),
             inline=True,
         )
-        
-        # Calculate time remaining
-        now = datetime.utcnow()
-        if now < self.end_time:
-            remaining = self.end_time - now
-            hours, remainder = divmod(int(remaining.total_seconds()), 3600)
-            minutes, seconds = divmod(remainder, 60)
-            
-            if hours > 0:
-                time_str = f"{hours}h {minutes}m {seconds}s"
-            elif minutes > 0:
-                time_str = f"{minutes}m {seconds}s"
-            else:
-                time_str = f"{seconds}s"
-            
-            embed.add_field(
-                name="⏰ Time Remaining",
-                value=time_str,
-                inline=True,
-            )
-        else:
-            embed.add_field(
-                name="⏰ Status",
-                value="Ended",
-                inline=True,
-            )
-        
-        embed.set_footer(text=f"Ends at {self.end_time.strftime('%I:%M:%S %p UTC')}")
-        
+
+        # Use Discord timestamps so the client renders a live countdown (no periodic edits needed)
+        end_ts = int(self.end_time.timestamp())
+        embed.add_field(
+            name="⏰ Ends",
+            value=f"<t:{end_ts}:F> • <t:{end_ts}:R>",
+            inline=False,
+        )
+
+        embed.add_field(
+            name="📌 Status",
+            value="Ended" if self.is_ended else "Open",
+            inline=True,
+        )
+
+        embed.set_footer(text=f"Giveaway ID: {self.custom_id}")
         return embed
       
     # Update the giveaway message with current data.
@@ -208,29 +200,28 @@ class GiveawayCog(commands.Cog):
     
     @tasks.loop(seconds=5)
     async def giveaway_update_task(self):
-        # Background task to update all active giveaways every 5 seconds
-        now = datetime.utcnow()
+        # Background task to end giveaways once their end_time has passed.
+        # We intentionally do NOT edit giveaway messages on a timer; Discord clients can render
+        # countdowns using <t:...:R> without any API traffic.
+        now = datetime.now(timezone.utc)
         ended_giveaways = []
-        
+
         for custom_id, view in list(self.active_giveaways.items()):
             try:
                 # Skip if no valid message reference
                 if not view.message:
                     logger.warning(f"Skipping giveaway {custom_id}: no message reference")
                     continue
-                    
+
                 if now >= view.end_time and not view.is_ended:
                     # Giveaway has ended
                     view.is_ended = True
                     ended_giveaways.append((custom_id, view))
-                elif not view.is_ended:
-                    # Update countdown
-                    await view.update_embed()
             except OSError as e:
                 # Network errors (DNS, connection issues)
-                logger.warning(f"Network error updating giveaway {custom_id}: {e}. Will retry next cycle.")
+                logger.warning(f"Network error checking giveaway {custom_id}: {e}. Will retry next cycle.")
             except Exception as e:
-                logger.error(f"Error updating giveaway {custom_id}: {e}")
+                logger.error(f"Error checking giveaway {custom_id}: {e}")
         
         # Process ended giveaways
         for custom_id, view in ended_giveaways:
@@ -302,8 +293,8 @@ class GiveawayCog(commands.Cog):
                 await interaction.response.send_message("❌ Duration must be positive.", ephemeral=True)
                 return
 
-            # Calculate end time
-            end_time = datetime.utcnow() + timedelta(minutes=duration_minutes)
+            # Calculate end time (store as UTC-aware for correct timestamp rendering)
+            end_time = datetime.now(timezone.utc) + timedelta(minutes=duration_minutes)
             
             # Create unique ID for this giveaway
             custom_id = f"giveaway_{interaction.id}"
