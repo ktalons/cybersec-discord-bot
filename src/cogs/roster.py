@@ -151,9 +151,9 @@ class RosterMainView(discord.ui.View):
         self.cog = cog
         self.custom_id = custom_id
         
-        # Ensure component custom_ids are unique per roster to prevent cross-roster collisions
-        self.interested_button.custom_id = f"roster_interested:{custom_id}"
-        self.remove_button.custom_id = f"roster_remove:{custom_id}"
+        # Set unique custom_ids for buttons based on roster custom_id
+        self.interested_button.custom_id = f"{custom_id}_interested"
+        self.remove_button.custom_id = f"{custom_id}_remove"
         
         # Roster configuration
         self.title: str = ""
@@ -174,7 +174,7 @@ class RosterMainView(discord.ui.View):
         self._last_update: float = 0
         self._update_cooldown: float = 3.0  # 3 seconds between updates
     
-    @discord.ui.button(label="I'm Interested!", style=discord.ButtonStyle.primary, emoji="✋", custom_id="roster_interested")
+    @discord.ui.button(label="I'm Interested!", style=discord.ButtonStyle.primary, emoji="✋")
     async def interested_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         
         # Check if roster is full
@@ -214,7 +214,7 @@ class RosterMainView(discord.ui.View):
         )
     
     # Handle when a user wants to remove themselves from the roster.
-    @discord.ui.button(label="Remove Me", style=discord.ButtonStyle.danger, emoji="❎", custom_id="roster_remove")
+    @discord.ui.button(label="Remove Me", style=discord.ButtonStyle.danger, emoji="❎")
     async def remove_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         
         if interaction.user.id not in self.participants:
@@ -274,12 +274,6 @@ class RosterMainView(discord.ui.View):
                     self.roster_message = await channel.fetch_message(self.message_id)
             except Exception as conv_e:
                 logger.warning(f"Could not convert roster message to regular Message: {conv_e}")
-            
-            # Explicitly register persistent view for this message to avoid dispatcher mixing rosters
-            try:
-                self.cog.bot.add_view(self, message_id=self.message_id)
-            except Exception as reg_e:
-                logger.warning(f"Failed to register roster view {self.custom_id}: {reg_e}")
             
             # Register this view with the cog
             self.cog.active_rosters[self.custom_id] = self
@@ -499,28 +493,35 @@ class RosterCog(commands.Cog):
                 view.roster_message = message
                 view.channel_id = data["channel_id"]
                 view.message_id = data["message_id"]
-
-                # Align button custom_ids with the message (supports legacy static IDs)
-                try:
-                    for row in getattr(message, "components", []):
-                        for component in getattr(row, "children", []):
-                            cid = getattr(component, "custom_id", None)
-                            if not cid:
-                                continue
-                            if cid.startswith("roster_interested"):
-                                view.interested_button.custom_id = cid
-                            elif cid.startswith("roster_remove"):
-                                view.remove_button.custom_id = cid
-                except Exception as cid_e:
-                    logger.warning(f"Could not sync custom IDs for roster {data['custom_id']}: {cid_e}")
                 
                 # Re-attach the view to the message
                 self.bot.add_view(view, message_id=message.id)
+                await self._migrate_legacy_roster_view(message, view)
                 self.active_rosters[data["custom_id"]] = view
                 
                 logger.info(f"Restored roster {data['custom_id']} with {len(view.participants)} participants")
             except Exception as e:
                 logger.error(f"Failed to restore roster {data.get('custom_id', 'unknown')}: {e}")
+
+    def _has_legacy_roster_buttons(self, message: discord.Message) -> bool:
+        legacy_ids = {"roster_interested", "roster_remove"}
+        for row in message.components:
+            for component in getattr(row, "children", []):
+                if getattr(component, "custom_id", None) in legacy_ids:
+                    return True
+        return False
+
+    async def _migrate_legacy_roster_view(self, message: discord.Message, view: RosterMainView):
+        # Update old messages that used shared custom_ids so they don't collide on restart
+        if not self._has_legacy_roster_buttons(message):
+            return
+        try:
+            await message.edit(view=view)
+            logger.info(f"Migrated legacy roster buttons for {view.custom_id}")
+        except discord.Forbidden as e:
+            logger.error(f"No permission to update roster buttons for {view.custom_id}: {e}")
+        except discord.HTTPException as e:
+            logger.error(f"Failed to update roster buttons for {view.custom_id}: {e}")
     
     async def save_roster_to_db(self, view: RosterMainView):
         # Save a roster to the database
