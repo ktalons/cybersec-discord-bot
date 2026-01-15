@@ -287,7 +287,7 @@ class RosterMainView(discord.ui.View):
             raise
 
     # Updates the roster embed with current participants
-    async def update_roster_display(self, force: bool = False):
+    async def update_roster_display(self, force: bool = False, retry: bool = True):
         import time
         import asyncio
         
@@ -326,9 +326,11 @@ class RosterMainView(discord.ui.View):
         except discord.HTTPException as e:
             # Handle rate limits with exponential backoff
             if e.status == 429:
-                retry_after = e.response.headers.get('Retry-After', 5)
+                retry_after = float(e.response.headers.get('Retry-After', 5))
                 logger.warning(f"Rate limited on roster {self.custom_id}. Retry after {retry_after}s")
-                # Don't retry here - let the next interaction handle it
+                if retry:
+                    await asyncio.sleep(retry_after)
+                    await self.update_roster_display(force=True, retry=False)
                 return
             elif e.status == 401 or "Webhook" in str(e):
                 # If the original interaction webhook token expired, recover and retry once
