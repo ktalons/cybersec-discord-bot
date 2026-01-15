@@ -235,7 +235,7 @@ class RosterMainView(discord.ui.View):
         await self.cog.save_roster_to_db(self)
         
         # Update the roster display
-        await self.update_roster_display()
+        await self.update_roster_display(force=True)
 
     # adds member, returns true
     async def add_participant(self, user: discord.Member, skill_level: str) -> bool:
