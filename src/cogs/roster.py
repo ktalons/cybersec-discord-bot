@@ -319,7 +319,20 @@ class RosterMainView(discord.ui.View):
             await self.roster_message.edit(embed=embed)
             self._last_update = now
         except discord.NotFound:
-            logger.warning(f"Roster message {self.custom_id} was deleted")
+            # Could be deleted OR an expired interaction webhook; try to recover and retry once
+            if self.channel_id and self.message_id:
+                try:
+                    channel = self.cog.bot.get_channel(self.channel_id)
+                    if channel:
+                        self.roster_message = await channel.fetch_message(self.message_id)
+                        logger.info(f"Recovered message reference for roster {self.custom_id} after NotFound, retrying update")
+                        await self.roster_message.edit(embed=embed)
+                        self._last_update = now
+                        return
+                except discord.NotFound:
+                    logger.warning(f"Roster message {self.custom_id} was deleted")
+                except Exception as rec_e:
+                    logger.error(f"Failed to recover roster message after NotFound: {rec_e}")
             self.roster_message = None
         except discord.Forbidden as e:
             logger.error(f"No permission to edit roster message {self.custom_id}: {e}")
